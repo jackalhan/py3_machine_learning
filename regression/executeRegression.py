@@ -19,13 +19,15 @@ dataframe['High/Low Perc.'] = (dataframe['Adj. High'] - dataframe['Adj. Low']) /
 #Define percent volatility between old-new for each day
 dataframe['New/Old Perc.'] = (dataframe['Adj. Close'] - dataframe['Adj. Open']) / dataframe['Adj. Open'] * 100.0
 
+# which one of the following columns does have a relation with the price. Do not forget, we need to pick the right attributes
+#                         price          price          x             x              x           x                 x
 dataframe = dataframe[['Adj. Open', 'Adj. Close', 'New/Old Perc.', 'Adj. High', 'Adj. Low', 'High/Low Perc.', 'Adj. Volume', ]]
 
 
 forecast_col = 'Adj. Close'
 dataframe.fillna(value=-99999, inplace=True) # pandas term, Nan data, therefore we are going to replace Nan data with some extreme numbers so that we can see the boundaries of our model
 
-forecast_out = int(math.ceil(0.01 * len(dataframe))) #to the nearest number. How many days do we want to take care of instead of forecasting today or tomorrows Adj. Close.
+forecast_out = int(math.ceil(0.1 * len(dataframe))) #to the nearest number. How many days do we want to take care of instead of forecasting today or tomorrows Adj. Close.
                                                     # we can do it by changing the value of 0.1
 print(forecast_out)
 
@@ -33,9 +35,12 @@ dataframe['label'] = dataframe[forecast_col].shift(-forecast_out) #shifting the 
 
 #print(dataframe.head())
 
-X = np.array(dataframe.drop(['label'], 1)) # dataframe drop function is returning a new dataframe.
-                                           # we want to return all the attributes of dataframe except the label attribute
-                                           # to be a somehow lazy :)
+# dataframe drop function is returning a new dataframe.
+# we want to return all the attributes of dataframe except the label attribute
+# to be a somehow lazy :)
+# we need to remove attributes related to price.
+X = np.array(dataframe.drop(['label','Adj. Close','Adj. Open'], 1))
+
 
 # now scaling X.
 # We scaling X before we feed it though the classifier but let's say we feed it through class far we have a classifier and
@@ -47,13 +52,11 @@ X = np.array(dataframe.drop(['label'], 1)) # dataframe drop function is returnin
 # you weould always skip that step.
 X = preprocessing.scale(X)
 dataframe.dropna(inplace=True)
-
 X_lately = X[-forecast_out:]
-
 # now redefining x
 # X is being equalt to X to the point of where we were able to forecast
 # we make sure that we only have X;s where we have values for y
-X = X[:-forecast_out:]
+X = X[:-forecast_out] # X, up to forecast out and finish the whole thing
 
 
 Y = np.array(dataframe['label'])
