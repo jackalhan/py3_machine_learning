@@ -1,8 +1,0 @@
-Modules
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-Quandl : Quandl is providing financial datasets. You can specify any dataset to work on it.
-Pandas : Data analysis module. It enables data to be divided into different frame structures in order to achieve any kind of data manipulations.
-sklearn : Machine learning library of python
-    preprocessing : scaling of data, goal is keep our data between +1 to -1, processing speed.
-    cross_validation : creating or training testing samples. Splitting up and shuffling up your data.
-    svm : support vector machines to do regression
