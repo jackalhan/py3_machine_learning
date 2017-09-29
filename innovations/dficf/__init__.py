@@ -2,7 +2,8 @@ import os
 import datetime as dt
 import math
 import string
-import innovations.dficf.hierarchical_tfidf as hierarchical_tfidf
+from innovations.dficf import hierarchical_tfidf
+from sklearn.datasets import load_iris
 import collections
 from itertools import chain
 import codecs
@@ -12,6 +13,19 @@ import re
 from stop_words import get_stop_words
 from scipy import spatial
 import pickle
+import operator
+
+
+from sklearn.utils import Bunch
+'''
+#Container object for datasets
+return Bunch(data=data, target=target,
+                 target_names=target_names,
+                 DESCR=fdescr,
+                 feature_names=['sepal length (cm)', 'sepal width (cm)',
+                                'petal length (cm)', 'petal width (cm)'])
+
+'''
 FOLDER_SEPERATOR = "/"
 __GENERATED_DATA_FOLDER = 'generated_data'
 __FOLDER_NAME = 'bbc'
@@ -127,8 +141,6 @@ def hiarchical_dficf(is_test_run=False, save=False):
         train_set = dict()
         # test_set = dict()
 
-
-
         train_set['sport'] = ["Katerina Thanou is confident she and fellow sprinter Kostas Kenteris will not be punished for missing drugs tests before the Athens Olympics."
                     "The Greek pair appeared at a hearing on Saturday which will determine whether their provisional bans from athletics ruling body the IAAF should stand. "
                     "After five months we finally had the chance to give explanations. I am confident and optimistic, said Thanou. The athletes lawyer Grigoris Ioanidis "
@@ -185,13 +197,16 @@ def hiarchical_dficf(is_test_run=False, save=False):
 
         print('train set:', train_set)
         print('test set:', test_set)
-    count_vectorizer = CountVectorizer(stop_words='english', stemming_and_lemmatization=True)
 
+    count_vectorizer = CountVectorizer(stop_words='english', stemming_and_lemmatization=True)
 
     # categorical values from the trained count vectorizer.
     vocabularies_with_categories_, number_of_categories, dict_for_term_frequencies, dict_for_number_of_documents, \
     dict_for_local_category_document_term_count, dict_for_global_category_document_term_count, \
     dict_for_global_category_count = count_vectorizer.fit_transform(train_set)
+
+    del train_set
+    del count_vectorizer
 
     dficf = DfIcfTransformer(vocabularies_with_categories_, number_of_categories, dict_for_term_frequencies,
                              dict_for_number_of_documents,
@@ -206,17 +221,23 @@ def hiarchical_dficf(is_test_run=False, save=False):
         print(_cat)
         print("-" * 50)
 
-        print(10 * '*')
-        print("dficf_weighs_for_documents_in_each_category:", _val.toarray())
+        # print(10 * '*')
+        # print("dficf_weighs_for_documents_in_each_category:", _val.toarray())
+        #
+        # print(10 * '*')
+        # print("vocabulary_for_each_category")
+        # for _subkey, _subval in dficf.vocabulary_for_each_category_[_cat].items():
+        #     print('Term ({}) : Position/Index ({})'.format(_subkey, _subval))
+        # print(10 * '*')
+        # print("dcicf_weights_for_terms_in_each_category")
+        # for _subkey, _subval in dficf.dficf_weighs_for_terms_in_each_category_[_cat].items():
+        #     print('Term ({}) : dficf weight ({})'.format(_subkey, _subval))
 
-        print(10 * '*')
-        print("vocabulary_for_each_category")
-        for _subkey, _subval in dficf.vocabulary_for_each_category_[_cat].items():
-            print('Term ({}) : Position/Index ({})'.format(_subkey, _subval))
-        print(10 * '*')
-        print("dcicf_weights_for_terms_in_each_category")
-        for _subkey, _subval in dficf.dficf_weighs_for_terms_in_each_category_[_cat].items():
-            print('Term ({}) : dficf weight ({})'.format(_subkey, _subval))
+        _voc = dficf.vocabulary_for_each_category_[_cat]
+        sorted_x = sorted(x.items(), key=operator.itemgetter(1))
+
+
+
 
     dficf.fit_transform(test_set)
 
@@ -419,8 +440,8 @@ if __name__ == "__main__":
     #hiarchical_dficf()
 
     # test
-    #hiarchical_dficf(True)
-    classical_tfidf(True)
+    hiarchical_dficf(True)
+    #classical_tfidf(True)
 
 # start_time = dt.datetime.now()
     # print('Files are getting ready')

@@ -833,9 +833,38 @@ class DfIcfTransformer(object):
             val = _init_val
         return val
 
+    def get_global_vectors(self):
+
+        #global dictionary is getting filed
+        self.global_vocabulary={}
+        global_vec_pntr = 0
+        for _cat, _dict in self.vocabulary_for_each_category_:
+            for _voc in _dict.items():
+                if _voc not in self.global_vocabulary:
+                    self.global_vocabulary[_voc] = global_vec_pntr
+                    global_vec_pntr += 1
+
+        from sklearn.utils import Bunch
+        '''
+        #Container object for datasets
+        return Bunch(data=data, target=target,
+                         target_names=target_names,
+                         DESCR=fdescr,
+                         feature_names=['sepal length (cm)', 'sepal width (cm)',
+                                        'petal length (cm)', 'petal width (cm)'])
+
+        '''
+
+        for _subkey, _subval in self.dficf_weighs_for_terms_in_each_category_[_cat].items():
+
+            print('Term ({}) : dficf weight ({})'.format(_subkey, _subval))
+
+
+
     def transform(self):
 
         print('DFICF weights are getting calculated')
+
         self.dict_for_term_dcicf_weights_for_each_category = {}
         for _cat, _docs in self.dict_for_term_frequencies.items():
             print('CATEGORY: {}'.format(_cat))
@@ -857,6 +886,7 @@ class DfIcfTransformer(object):
                 _total_features_in_document = sum(_doc)
                 doc_dficf_weigts = {}
                 for _feature, _indx in  self.vocabularies_with_categories[_cat].items():
+
                     _term = _feature
 
                     # -----------
@@ -956,7 +986,7 @@ class DfIcfTransformer(object):
 
     def fit_transform(self, data, _stemming_and_lemmatization=True ):
 
-        from ahhead_ai.experiments.orj_text import CountVectorizer as org_count_vectorizer
+        from .copy_of_orj_tfidf_vectorizer import CountVectorizer as org_count_vectorizer
         count_vectorizer = org_count_vectorizer(stop_words='english', stemming_and_lemmatization=_stemming_and_lemmatization)
         count_vectorizer.fit_transform(data)
         self.new_doc_voc = count_vectorizer.vocabulary_
