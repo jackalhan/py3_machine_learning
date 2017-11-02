@@ -14,6 +14,7 @@ build feature vectors from text documents.
 from __future__ import unicode_literals
 
 import array
+import operator
 from collections import Mapping, defaultdict
 import numbers
 from operator import itemgetter
@@ -990,6 +991,10 @@ class CountVectorizer(BaseEstimator, VectorizerMixin):
         return [t for t, i in sorted(six.iteritems(self.vocabulary_),
                                      key=itemgetter(1))]
 
+    def sort_voc(self, dict):
+        return sorted(dict.items(), key=operator.itemgetter(0))
+    def reverse_voc(self, dict):
+        return {y: x for x, y in dict.items()}
 
 def _make_int_array():
     """Construct an array.array of a type suitable for scipy.sparse indices."""

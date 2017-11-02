@@ -2,21 +2,26 @@ import os
 import datetime as dt
 import math
 import string
+
+from sklearn.model_selection import train_test_split
+
 from innovations.dficf import hierarchical_tfidf
 from sklearn.datasets import load_iris
 import collections
 from itertools import chain
 import codecs
 import pandas as pd
-#from nltk.corpus import stopwords
+# from nltk.corpus import stopwords
 import re
 from stop_words import get_stop_words
 from scipy import spatial
 import pickle
 import operator
-
-
+import innovations.utils as util
 from sklearn.utils import Bunch
+import numpy as np
+import random
+
 '''
 #Container object for datasets
 return Bunch(data=data, target=target,
@@ -32,7 +37,6 @@ __FOLDER_NAME = 'bbc'
 __BASE_FOLDER = r'/home/jackalhan/Development/app_data/tf_idf_hiarchical'
 TARGET_PATH = os.path.join(__BASE_FOLDER, __FOLDER_NAME)
 tokenize = lambda doc: doc.lower().split(" ")
-
 
 
 def get_files_content(root_folder, file_extension):
@@ -67,7 +71,6 @@ def get_files_content(root_folder, file_extension):
                                           columns=['Procedure', 'AccountID', 'Features'])
 
 
-
 def hiarchical_dficf(is_test_run=False, save=False):
     from innovations.dficf.modified_dficf_vectorizer import CountVectorizer, TfidfTransformer, DfIcfTransformer
 
@@ -78,120 +81,84 @@ def hiarchical_dficf(is_test_run=False, save=False):
         root_folder_name, files_dataframe = get_files_content(TARGET_PATH, 'txt')
         print('{} of files are parsed in {} mins.'.format(str(len(files_dataframe)),
                                                           ((dt.datetime.now() - start_time).seconds) / 60))
-
+        np.random.seed(0)
         data = files_dataframe.groupby(['Procedure'])
-        number_of_accounts = len(data)
-        train_set = dict()
+        len_of_data = len(data)
+        train_set = collections.OrderedDict()
+        test_set = collections.OrderedDict()
         for _proc, _grouped in data:
+            doc_size = len(_grouped.Features)
+            docs = _grouped.Features.transform(np.random.permutation)
+            features_train, features_test = train_test_split(docs[:int(doc_size / 4)], test_size=0.33)
             train_set[_proc] = list()
-            train_set[_proc].extend([x for x in _grouped.Features])
-            # train_set[_proc].extend([x for x in _grouped.Features[:25]])
-            # test_set[_proc] = list()
-            # test_set[_proc].extend([x for x in _grouped.Features[30:]])
-        test_set = [
-            'Lukas Jutkiewicz put City ahead with his first touch, the substitute glancing a header past Scott Carson.But Derby levelled within two minutes thanks '
-            'to another inspired substitution as Sam Winnall finished off Richard Keogh header across goal.Tomasz Kuszczak saved from Mason Bennett as the Rams went '
-            'closest to a winner. It was an afternoon of reunions at Pride Park as Gary Rowett came up against the club that had sacked him last December, while Carsley '
-            'returned to the club where he played alongside Rowett from 1995 to 1998. Relive Saturday EFL action Despite going into the game on the back of six straight defeats '
-            'in league and cup, Blues held their own, but David Nugent had the best chance of the first half with a curling effort which Kusczak palmed around the post.After '
-            'a quiet first half of just one attempt on target, the game exploded into life as both managers made changes around the hour mark which brought immediate rewards. '
-            'And both subs almost provided a winner as Winnall low drive forced another save from Kusczak, and Jutkiewicz header found Maxime Colin unmarked, but the defender '
-            'dragged his shot wide.The draw ended a run of five straight Championship defeats for Birmingham, who remain 23rd, while Derby have now lost just twice in 22 home '
-            'matches and are 15th.Derby manager Gary Rowett told BBC Radio Derby: "In terms of control of the game we should have had a bit more but control is one thing and '
-            'you have to turn that control and build up in the final third into good attacking play. "First half we got into good positions but couldn find that bit of quality. '
-            'There was less space today because Birmingham dropped in deep and blocked the game up."We had a spell of about 15 minutes when we looked nervous and edgy and perhaps '
-            'took a safe pass and I was disappointed with that - we needed to take more risks."Birmingham caretaker manager Lee Carsley said: "We spoke about being a little more resilient, '
-            'a bit more compact and trying to nullify the opposition a bit because we knew the quality they have and the firepower available to them."We knew that we had to be at our best '
-            'in terms of shape and possession and I thought we did that quite well. We just need to look now about having a little more quality on the counter and in the final third."We'
-            ' got some really good lads in there, lads that want to do really well and the characteristics of a top player is to reproduce good form week in, week out and that the next step for them."']
-        # test_set = ['McIlroy aiming for Madrid title Northern Ireland man James McIlroy is confident'
-        #             ' he can win his first major title at this weekend Spar European Indoor Championships in Madrid. '
-        #             'The 28-year-old has been in great form in recent weeks and will go in as one of the 800 metres favourites. '
-        #             '"I believe after my wins abroad and in our trial race in Sheffield, I can run my race from the front, '
-        #             'back or middle," said McIlroy. New coach Tony Lester has helped get McIlroy career back on '
-        #             'track. The 28-year-old 800 metres runner has not always matched his promise with performances but believes '
-        #             'his decision to change coaches and move base will bring the rewards. McIlroy now lives in Windsor and feels his '
-        #             'career has been transformed by the no-nonsense leadership style of former Army sergeant Lester. Lester is '
-        #             'better known for his work with 400m runners Roger Black and Mark Richardson in the past but under '
-        #             'his guidance McIlroy has secured five wins this indoor season. stripped of all her medals and banned '
-        #             'for two years," said Pound. Asked if there was a timescale as to what medals could be taken, Pound said: '
-        #             '"That is not an issue at all." However, under International Olympic Committee (IOC) rules, athletes can '
-        #             'only be stripped of their medals if caught within three years of the event. Jones, who won '
-        #             'five medals at the 2000 Olympics, denies using drugs and says she will take legal action over '
-        #             'Conte allegations. Balco Laboratories is the firm at the centre of a wide-reaching investigation '
-        #             'into doping in the US. Pound continued: "If she has indeed taken drugs it is going to be a big '
-        #             'disappointment for a lot of people." It seemed as though Athens would be the first Games where '
-        #             'the men would fail to win a medal with Michael East the only individual track finalist in the 1500m. '
-        #             'But Darren Campell, Jason Gardener, Marlon Devonish and Mark Lewis-Francis made amends in the sprint relay. '
-        #             'The quartet held off favourites the USA to win Britain first relay medal since 1912 in 38.07 seconds. '
-        #             'Gardener added the Olympic relay crown to his World Indoor title over 60m and, just like Holmes, '
-        #             'finally lived up to his promise in 2004. Kelly Sotherton completed Team GB athletics medal haul in '
-        #             'Athens with a surprise bronze in the heptathlon. The 28-year-old won her first championship medal '
-        #             'since becoming a full-time athlete in 2003. But it was a different story for Britain defending champion Denise '
-        #             'Lewis, who withdrew on day two of the competition after some poor results. Lewis, who was troubled by '
-        #             'injury, has ruled out retiring while Sotherton is tipped to build on her success. The Athens Olympics '
-        #             'proved to be a landmark occasion for Steve Backley, who retired from competition after finishing fourth '
-        #             'in the javelin. The battling 35-year-old leaves the sport with a vast medal haul including two silvers '
-        #             'and one Olympic bronze. And Backley departure was balanced by the return of injury-hit decathlete '
-        #             'Dean Macey, who came fourth in Athens.The continued improvement of sprinter Abi Oyepitan and long jumper '
-        #             'Chris Tomlinson also boosted Team GB. Sadly, the 2004 Olympics did not escape the problems of drugs misuse. '
-        #             'On the eve of the Games, Greek sprinters Kostas Kenteris and Katerina Thanou missed a drugs test and claimed '
-        #             'to have been involved in a road crash.']
+            # train_set[_proc].extend([x for x in _grouped.Features])
+            train_set[_proc].extend([x for x in features_train])
+            test_set[_proc] = list()
+            test_set[_proc].extend([x for x in features_test])
+
     else:
-        train_set = dict()
+        train_set = collections.OrderedDict()
         # test_set = dict()
 
-        train_set['sport'] = ["Katerina Thanou is confident she and fellow sprinter Kostas Kenteris will not be punished for missing drugs tests before the Athens Olympics."
-                    "The Greek pair appeared at a hearing on Saturday which will determine whether their provisional bans from athletics ruling body the IAAF should stand. "
-                    "After five months we finally had the chance to give explanations. I am confident and optimistic, said Thanou. The athletes lawyer Grigoris Ioanidis "
-                    "said he believed the independent disciplinary committee set up by the Greek Athletics Federation would find them innocent. We are almost certain that "
-                    "the charges will be dropped, said Ioanidis.",
-
-                    "London Marathon organisers are hoping that banned athlete Susan Chepkemei will still take part in this year's race on 17 April.Chepkemei was suspended from all competition "
-                    "until the end of the year by Athletics Kenya after failing to report to a national training camp. We are watching it closely said London race director David Bedford. The camp "
-                    "in Embu was to prepare for the IAAF World Cross Country Championships later this month. Chepkemei however took part and finished third in last Sunday's world best 10K race in "
-                    "Puerto Rico.",
-
-                    "Paula Radcliffe has been granted extra time to decide whether to compete in the World Cross-Country Championships. The 31-year-old is concerned the event, which "
-                    "starts on 19 March in France, could upset her preparations for the London Marathon on 17 April. Radcliffe was world cross-country champion in 2001 and 2002 but missed "
-                    "last year's event because of injury. In her absence, the GB team won bronze in Brussels.",
-
-                    "Wayne Rooney made a winning return to Everton as Manchester United cruised into the FA Cup quarter-finals."
-                    "Rooney received a hostile reception, but goals in each half from Quinton Fortune and Cristiano Ronaldo silenced the jeers at Goodison Park. Fortune headed home after "
-                    "23 minutes before Ronaldo scored when Nigel Martyn parried Paul Scholes' free-kick. Marcus Bent missed Everton's best chance when Roy Carroll, who was later struck by "
-                    "a missile, saved at his feet. It was a fantastic performance by us. In fairness I think Everton have missed a couple of players and got some young players out.",
-
-                    "A brave defensive display, led by keeper David James, helped Manchester City hold the leaders Chelsea. After a quiet opening, James denied Damien Duff, Jiri Jarosik and "
-                    "Mateja Kezman, while Paul Bosvelt cleared William Gallas' header off the line. Robbie Fowler should have scored for the visitors but sent his header wide. Chelsea had "
-                    "most of the possession in the second half but James kept out Frank Lampard's free-kick and superbly tipped the same player's volley wide. City went into the game with the "
-                    "proud record of being the only domestic team to beat Chelsea this season."]
+        train_set['sport'] = [
+            # "Katerina Thanou is confident she and fellow sprinter Kostas Kenteris will not be punished for missing drugs tests before the Athens Olympics."
+            # "The Greek pair appeared at a hearing on Saturday which will determine whether their provisional bans from athletics ruling body the IAAF should stand. "
+            # "After five months we finally had the chance to give explanations. I am confident and optimistic, said Thanou. The athletes lawyer Grigoris Ioanidis "
+            # "said he believed the independent disciplinary committee set up by the Greek Athletics Federation would find them innocent. We are almost certain that "
+            # "the charges will be dropped, said Ioanidis.",
+            #
+            # "London Marathon organisers are hoping that banned athlete Susan Chepkemei will still take part in this year's race on 17 April.Chepkemei was suspended from all competition "
+            # "until the end of the year by Athletics Kenya after failing to report to a national training camp. We are watching it closely said London race director David Bedford. The camp "
+            # "in Embu was to prepare for the IAAF World Cross Country Championships later this month. Chepkemei however took part and finished third in last Sunday's world best 10K race in "
+            # "Puerto Rico.",
+            #
+            # "Paula Radcliffe has been granted extra time to decide whether to compete in the World Cross-Country Championships. The 31-year-old is concerned the event, which "
+            # "starts on 19 March in France, could upset her preparations for the London Marathon on 17 April. Radcliffe was world cross-country champion in 2001 and 2002 but missed "
+            # "last year's event because of injury. In her absence, the GB team won bronze in Brussels.",
+            #
+            # "Wayne Rooney made a winning return to Everton as Manchester United cruised into the FA Cup quarter-finals."
+            # "Rooney received a hostile reception, but goals in each half from Quinton Fortune and Cristiano Ronaldo silenced the jeers at Goodison Park. Fortune headed home after "
+            # "23 minutes before Ronaldo scored when Nigel Martyn parried Paul Scholes' free-kick. Marcus Bent missed Everton's best chance when Roy Carroll, who was later struck by "
+            # "a missile, saved at his feet. It was a fantastic performance by us. In fairness I think Everton have missed a couple of players and got some young players out.",
+            #
+            # "A brave defensive display, led by keeper David James, helped Manchester City hold the leaders Chelsea. After a quiet opening, James denied Damien Duff, Jiri Jarosik and "
+            # "Mateja Kezman, while Paul Bosvelt cleared William Gallas' header off the line. Robbie Fowler should have scored for the visitors but sent his header wide. Chelsea had "
+            # "most of the possession in the second half but James kept out Frank Lampard's free-kick and superbly tipped the same player's volley wide. City went into the game with the "
+            # "proud record of being the only domestic team to beat Chelsea this season."
+            "football ball player", "ball player"
+        ]
 
         train_set['tech'] = [
-                    "Before now many spammers have recruited home PCs to act as anonymous e-mail relays in an attempt to hide the origins of their junk mail. The PCs are recruited using viruses "
-                    "and worms that compromise machines via known vulnerabilities or by tricking people into opening an attachment infected with the malicious program. Once compromised the machines "
-                    "start to pump out junk mail on behalf of spammers. Spamhaus helps to block junk messages from these machines by collecting and circulating blacklists of net addresses known to "
-                    "harbour infected machines. But the novel worm spotted recently by Spamhaus routes junk via the mail servers of the net service firm that infected machines used to get online in "
-                    "the first place. In this way the junk mail gets a net address that looks legitimate. As blocking all mail from net firms just to catch the spam is impractical, Spamhaus is worried "
-                    "that the technique will give junk mailers the ability to spam with little fear of being spotted and stopped.",
+            # "Before now many spammers have recruited home PCs to act as anonymous e-mail relays in an attempt to hide the origins of their junk mail. The PCs are recruited using viruses "
+            # "and worms that compromise machines via known vulnerabilities or by tricking people into opening an attachment infected with the malicious program. Once compromised the machines "
+            # "start to pump out junk mail on behalf of spammers. Spamhaus helps to block junk messages from these machines by collecting and circulating blacklists of net addresses known to "
+            # "harbour infected machines. But the novel worm spotted recently by Spamhaus routes junk via the mail servers of the net service firm that infected machines used to get online in "
+            # "the first place. In this way the junk mail gets a net address that looks legitimate. As blocking all mail from net firms just to catch the spam is impractical, Spamhaus is worried "
+            # "that the technique will give junk mailers the ability to spam with little fear of being spotted and stopped.",
+            #
+            # "Use of games in schools has been patchy she found, with Sim City proving the most popular. Traditionally schools have eschewed mainstream games in favour of used so-called edu-tainment "
+            # "software in a belief that such packages help to make learning fun, she found in her research. It is perhaps in a compromise between edutainment and mainstream games that the greatest "
+            # "potential for classroom useable games lies, she wrote in a paper entitled Games and Learning. 'Lite' versions of existing games could be the way forward and would overcome one of the "
+            # "biggest hurdles - persuading developers to write for the educational market. This would appeal to developers because of the low costs involved in adapting them as well as offering a "
+            # "new opportunity for marketing. Already there are games on the market, such as Civilisation and Age of Empire, that have educational elements said Mr Owen. Even in Grand Theft Auto it "
+            # "is not just the violence that engages people, he said. It could be some time until that particular game makes it into the classroom though.",
+            #
+            # "Microsoft's Media Player 10 took the award for Most Wanted Software. This year was the 10th anniversary of the PC Pro awards, which splits its prizes into two sections. The first are "
+            # "chosen by the magazine's writers and consultants, the second are voted for by readers. Mr Trotter said more than 13,000 people voted for the Reliability and Service Awards, "
+            # "twice as many as in 2003. Net-based memory and video card shop Crucial shared the award for Online Vendor of the year with Novatech."
+            "football game console", "game console"
+            ]
 
-                    "Use of games in schools has been patchy she found, with Sim City proving the most popular. Traditionally schools have eschewed mainstream games in favour of used so-called edu-tainment "
-                    "software in a belief that such packages help to make learning fun, she found in her research. It is perhaps in a compromise between edutainment and mainstream games that the greatest "
-                    "potential for classroom useable games lies, she wrote in a paper entitled Games and Learning. 'Lite' versions of existing games could be the way forward and would overcome one of the "
-                    "biggest hurdles - persuading developers to write for the educational market. This would appeal to developers because of the low costs involved in adapting them as well as offering a "
-                    "new opportunity for marketing. Already there are games on the market, such as Civilisation and Age of Empire, that have educational elements said Mr Owen. Even in Grand Theft Auto it "
-                    "is not just the violence that engages people, he said. It could be some time until that particular game makes it into the classroom though.",
-
-                    "Microsoft's Media Player 10 took the award for Most Wanted Software. This year was the 10th anniversary of the PC Pro awards, which splits its prizes into two sections. The first are "
-                    "chosen by the magazine's writers and consultants, the second are voted for by readers. Mr Trotter said more than 13,000 people voted for the Reliability and Service Awards, "
-                    "twice as many as in 2003. Net-based memory and video card shop Crucial shared the award for Online Vendor of the year with Novatech."]
-
-        train_set['entertainment'] = [ "If the ratings are confirmed, the episode will have given the soap its highest audience for a year. The overnight figures showed almost 60% of the viewing public tuned into EastEnders "
-                    "between 2000 and 2100 GMT, leaving ITV1 with about 13%. We are very pleased with the figures,a BBC spokesman said. It shows viewers have really enjoyed the story of Den's demise. "
-                    "The show's highest audience came at Christmas 1986, when more than 30 million tuned in to see Den, played by Leslie Grantham, hand divorce papers to wife Angie.",
-
-                    "Sky first scooped Oscar rights from the BBC in 1999, but the BBC won them back in 2001 when Sky was forced to pull out of a bidding war due to financial constraints. BBC viewers will "
-                    "of course be able to watch quality coverage of the 2005 Academy Awards on the BBC's bulletins and news programmes, a spokesman said. Among the films tipped to do well at this year's "
-                    "Academy Awards are Martin Scorsese's The Aviator, Jean-Pierre Jeunet's A Very Long Engagement and the Ray Charles biopic, Ray."]
+        train_set['entertainment'] = [
+            # "If the ratings are confirmed, the episode will have given the soap its highest audience for a year. The overnight figures showed almost 60% of the viewing public tuned into EastEnders "
+            # "between 2000 and 2100 GMT, leaving ITV1 with about 13%. We are very pleased with the figures,a BBC spokesman said. It shows viewers have really enjoyed the story of Den's demise. "
+            # "The show's highest audience came at Christmas 1986, when more than 30 million tuned in to see Den, played by Leslie Grantham, hand divorce papers to wife Angie.",
+            #
+            # "Sky first scooped Oscar rights from the BBC in 1999, but the BBC won them back in 2001 when Sky was forced to pull out of a bidding war due to financial constraints. BBC viewers will "
+            # "of course be able to watch quality coverage of the 2005 Academy Awards on the BBC's bulletins and news programmes, a spokesman said. Among the films tipped to do well at this year's "
+            # "Academy Awards are Martin Scorsese's The Aviator, Jean-Pierre Jeunet's A Very Long Engagement and the Ray Charles biopic, Ray."
+            "cinema console actor", "cinema actor"
+            ]
 
         test_set = ['football season is getting started']
 
@@ -205,7 +172,7 @@ def hiarchical_dficf(is_test_run=False, save=False):
     dict_for_local_category_document_term_count, dict_for_global_category_document_term_count, \
     dict_for_global_category_count = count_vectorizer.fit_transform(train_set)
 
-    del train_set
+
     del count_vectorizer
 
     dficf = DfIcfTransformer(vocabularies_with_categories_, number_of_categories, dict_for_term_frequencies,
@@ -214,56 +181,109 @@ def hiarchical_dficf(is_test_run=False, save=False):
                              dict_for_global_category_count)
 
     dficf.transform()
+    # print('Merged vocabularies:', dficf.sort_voc(dficf.reverse_voc(dficf.merged_vocabularies_)))
+    # for _cat, _val in dficf.dficf_weighs_for_documents_in_each_category_.items():
+    #     print("-" * 50)
+    #     print(_cat)
+    #     print("-" * 50)
+    #
+    #     # print(10 * '*')
+    #     # print("dficf_weighs_for_documents_in_each_category:", _val.toarray())
+    #     #
+    #     # print(10 * '*')
+    #     # print("vocabulary_for_each_category")
+    #     # for _subkey, _subval in dficf.vocabulary_for_each_category_[_cat].items():
+    #     #     print('Term ({}) : Position/Index ({})'.format(_subkey, _subval))
+    #     # print(10 * '*')
+    #     # print("dcicf_weights_for_terms_in_each_category")
+    #     # for _subkey, _subval in dficf.dficf_weighs_for_terms_in_each_category_[_cat].items():
+    #     #     print('Term ({}) : dficf weight ({})'.format(_subkey, _subval))
+    #     _voc = dficf.vocabulary_for_each_category_[_cat]
+    #     _reversed = dficf.reversed_vocabulary_for_each_category_[_cat]
+    #     _sorted_reversed = dficf.reversed_ordered_vocabulary_for_each_category_[_cat]
+    #
+    #     print('Normal Voc:', _voc)
+    #     print('Reversed Voc:', _reversed)
+    #     print('Sorted Reversed Voc:', _sorted_reversed)
+
+    # Just add the known items to the test set from the test set.
+    # Start
+    X, y, X_y_df = extract_elements_from_2Ddict(train_set)
+    X_y_df.to_csv(os.path.join(TARGET_PATH, 'train_documents.csv'))
+    # end
+    del train_set
+    dficf.fit_transform(X)
+    # print('test_set_voc_', dficf.new_doc_voc_)
+    # print('test_set_terms', dficf.term_dic_for_each_document)
+    # print('transformed_input_data_for_each_category_voc_', dficf.transformed_input_data_for_each_category_voc_)
+    X_data, y_data, y_data_, sentence_index = dficf.vectors_
+    # print('vectors of test set', dficf.vectors_)
+    # print('categories as dict', dficf.category_as_dict_)
+
+    #Just add the known items to the test set from the test set.
+    # Start
+    len_of_test = len(X)
+    len_of_test_ = len(X_data)
+    X_data_ = []
+    y_data__ =[]
+    for _i, _y in enumerate(y):
+        print('*'* 10)
+        print('Document index:', str(_i))
+        for _i_vectors in range(_i, len_of_test_, len_of_test):
+            print('Checking index in Data:', str(_i_vectors))
+            if (_y == y_data_[_i_vectors]):
+                print('Found index in Data:', str(_i_vectors))
+                print('Found doc in Data:', _y)
+                X_data_.append(X_data[_i_vectors])
+                y_data__.append(y_data_[_i_vectors])
+                break
+
+    # End
+
+    util.dump_adff('DFICF', 'DFICF BBC DATA', dficf.sort_voc(dficf.reverse_voc(dficf.merged_vocabularies_)),
+                   dficf.category_as_dict_, X_data_, y_data__, TARGET_PATH, 'dficf_train_bbc_arff')
 
 
-    for _cat, _val in dficf.dficf_weighs_for_documents_in_each_category_.items():
-        print("-" * 50)
-        print(_cat)
-        print("-" * 50)
 
-        # print(10 * '*')
-        # print("dficf_weighs_for_documents_in_each_category:", _val.toarray())
-        #
-        # print(10 * '*')
-        # print("vocabulary_for_each_category")
-        # for _subkey, _subval in dficf.vocabulary_for_each_category_[_cat].items():
-        #     print('Term ({}) : Position/Index ({})'.format(_subkey, _subval))
-        # print(10 * '*')
-        # print("dcicf_weights_for_terms_in_each_category")
-        # for _subkey, _subval in dficf.dficf_weighs_for_terms_in_each_category_[_cat].items():
-        #     print('Term ({}) : dficf weight ({})'.format(_subkey, _subval))
+    # Just add the known items to the test set from the test set.
+    # Start
+    X, y, X_y_df = extract_elements_from_2Ddict(test_set)
+    X_y_df.to_csv(os.path.join(TARGET_PATH, 'dficf_test_documents.csv'))
+    # end
+    del test_set
+    dficf.fit_transform(X, is_random=True)
+    # print('test_set_voc_', dficf.new_doc_voc_)
+    # print('test_set_terms', dficf.term_dic_for_each_document)
+    # print('transformed_input_data_for_each_category_voc_', dficf.transformed_input_data_for_each_category_voc_)
+    X_data, y_data, y_data_, sentence_index = dficf.vectors_
+    # print('vectors of test set', dficf.vectors_)
+    # print('categories as dict', dficf.category_as_dict_)
 
-        _voc = dficf.vocabulary_for_each_category_[_cat]
-        sorted_x = sorted(x.items(), key=operator.itemgetter(1))
+    test_data_df = pd.DataFrame(data=y_data_, columns=["Cat"])
+    test_data_df.to_csv(os.path.join(TARGET_PATH, 'dficf_test_labels.csv'))
+    util.dump_adff('DFICF', 'DFICF BBC DATA', dficf.sort_voc(dficf.reverse_voc(dficf.merged_vocabularies_)),
+                   dficf.category_as_dict_, X_data, y_data_, TARGET_PATH, 'dficf_test_bbc_arff', True)
 
+    #
+    # print('results')
+    # print('(max is important) score based:', dficf.similarity_scores_)
+    # print('(min is important) euclidean distance based:', dficf.similarity_euclidean_distance_)
+    # print('(max is important) cosine distance based:', dficf.similarity_cosine_distance_)
 
+    # if save is True:
+    #     with open(os.path.join(TARGET_PATH, 'dficf_weighs_for_documents_in_each_category.pickle'), 'wb') as handle:
+    #         pickle.dump(dficf.dficf_weighs_for_documents_in_each_category_, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    #
+    #     with open(os.path.join(TARGET_PATH,'vocabulary_for_each_category.pickle'), 'wb') as handle:
+    #         pickle.dump(dficf.vocabulary_for_each_category_, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    #
+    #     with open(os.path.join(TARGET_PATH, 'dcicf_weights_for_terms_in_each_category.pickle'), 'wb') as handle:
+    #         pickle.dump(dficf.dficf_weighs_for_terms_in_each_category_, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-
-    dficf.fit_transform(test_set)
-
-    print('test_set_voc_', dficf.new_doc_voc_)
-    print('test_set_terms', dficf.term_dic_for_each_document)
-    print('transformed_input_data_for_each_category_voc_', dficf.transformed_input_data_for_each_category_voc_)
-
-
-    print('results')
-    print('(max is important) score based:', dficf.similarity_scores_)
-    print('(min is important) euclidean distance based:', dficf.similarity_euclidean_distance_)
-    print('(max is important) cosine distance based:', dficf.similarity_cosine_distance_)
-
-    if save is True:
-        with open(os.path.join(TARGET_PATH, 'dficf_weighs_for_documents_in_each_category.pickle'), 'wb') as handle:
-            pickle.dump(dficf.dficf_weighs_for_documents_in_each_category_, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-        with open(os.path.join(TARGET_PATH,'vocabulary_for_each_category.pickle'), 'wb') as handle:
-            pickle.dump(dficf.vocabulary_for_each_category_, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-        with open(os.path.join(TARGET_PATH, 'dcicf_weights_for_terms_in_each_category.pickle'), 'wb') as handle:
-            pickle.dump(dficf.dficf_weighs_for_terms_in_each_category_, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 def classical_tfidf(is_test_run=False, save=False):
     # ORIGINAL LIB, MISSING LEMMATIZATON
-    #from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+    # from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 
     # COPY OF ORIGINAL BUT HAS A LEMMATIZATION MODULE
     from innovations.dficf.copy_of_orj_tfidf_vectorizer import CountVectorizer, TfidfTransformer
@@ -275,277 +295,276 @@ def classical_tfidf(is_test_run=False, save=False):
         root_folder_name, files_dataframe = get_files_content(TARGET_PATH, 'txt')
         print('{} of files are parsed in {} mins.'.format(str(len(files_dataframe)),
                                                           ((dt.datetime.now() - start_time).seconds) / 60))
-        train_set = [x for x in files_dataframe.Features]
+        np.random.seed(0)
+        data = files_dataframe.groupby(['Procedure'])
+        len_of_data = len(data)
+        train_set = collections.OrderedDict()
+        test_set = collections.OrderedDict()
+        for _proc, _grouped in data:
+            doc_size = len(_grouped.Features)
+            docs = _grouped.Features.transform(np.random.permutation)
+            features_train, features_test = train_test_split(docs[:int(doc_size / 4)], test_size=0.33)
+            train_set[_proc] = list()
+            # train_set[_proc].extend([x for x in _grouped.Features])
+            train_set[_proc].extend([x for x in features_train])
+            test_set[_proc] = list()
+            test_set[_proc].extend([x for x in features_test])
 
-        # test_set = ['McIlroy aiming for Madrid title Northern Ireland man James McIlroy is confident'
-        #             ' he can win his first major title at this weekend Spar European Indoor Championships in Madrid. '
-        #             'The 28-year-old has been in great form in recent weeks and will go in as one of the 800 metres favourites. '
-        #             '"I believe after my wins abroad and in our trial race in Sheffield, I can run my race from the front, '
-        #             'back or middle," said McIlroy. New coach Tony Lester has helped get McIlroy career back on '
-        #             'track. The 28-year-old 800 metres runner has not always matched his promise with performances but believes '
-        #             'his decision to change coaches and move base will bring the rewards. McIlroy now lives in Windsor and feels his '
-        #             'career has been transformed by the no-nonsense leadership style of former Army sergeant Lester. Lester is '
-        #             'better known for his work with 400m runners Roger Black and Mark Richardson in the past but under '
-        #             'his guidance McIlroy has secured five wins this indoor season. stripped of all her medals and banned '
-        #             'for two years," said Pound. Asked if there was a timescale as to what medals could be taken, Pound said: '
-        #             '"That is not an issue at all." However, under International Olympic Committee (IOC) rules, athletes can '
-        #             'only be stripped of their medals if caught within three years of the event. Jones, who won '
-        #             'five medals at the 2000 Olympics, denies using drugs and says she will take legal action over '
-        #             'Conte allegations. Balco Laboratories is the firm at the centre of a wide-reaching investigation '
-        #             'into doping in the US. Pound continued: "If she has indeed taken drugs it is going to be a big '
-        #             'disappointment for a lot of people." It seemed as though Athens would be the first Games where '
-        #             'the men would fail to win a medal with Michael East the only individual track finalist in the 1500m. '
-        #             'But Darren Campell, Jason Gardener, Marlon Devonish and Mark Lewis-Francis made amends in the sprint relay. '
-        #             'The quartet held off favourites the USA to win Britain first relay medal since 1912 in 38.07 seconds. '
-        #             'Gardener added the Olympic relay crown to his World Indoor title over 60m and, just like Holmes, '
-        #             'finally lived up to his promise in 2004. Kelly Sotherton completed Team GB athletics medal haul in '
-        #             'Athens with a surprise bronze in the heptathlon. The 28-year-old won her first championship medal '
-        #             'since becoming a full-time athlete in 2003. But it was a different story for Britain defending champion Denise '
-        #             'Lewis, who withdrew on day two of the competition after some poor results. Lewis, who was troubled by '
-        #             'injury, has ruled out retiring while Sotherton is tipped to build on her success. The Athens Olympics '
-        #             'proved to be a landmark occasion for Steve Backley, who retired from competition after finishing fourth '
-        #             'in the javelin. The battling 35-year-old leaves the sport with a vast medal haul including two silvers '
-        #             'and one Olympic bronze. And Backley departure was balanced by the return of injury-hit decathlete '
-        #             'Dean Macey, who came fourth in Athens.The continued improvement of sprinter Abi Oyepitan and long jumper '
-        #             'Chris Tomlinson also boosted Team GB. Sadly, the 2004 Olympics did not escape the problems of drugs misuse. '
-        #             'On the eve of the Games, Greek sprinters Kostas Kenteris and Katerina Thanou missed a drugs test and claimed '
-        #             'to have been involved in a road crash.']
-
-        test_set = ['Lukas Jutkiewicz put City ahead with his first touch, the substitute glancing a header past Scott Carson.But Derby levelled within two minutes thanks '
-                     'to another inspired substitution as Sam Winnall finished off Richard Keogh header across goal.Tomasz Kuszczak saved from Mason Bennett as the Rams went '
-                     'closest to a winner. It was an afternoon of reunions at Pride Park as Gary Rowett came up against the club that had sacked him last December, while Carsley '
-                     'returned to the club where he played alongside Rowett from 1995 to 1998. Relive Saturday EFL action Despite going into the game on the back of six straight defeats '
-                     'in league and cup, Blues held their own, but David Nugent had the best chance of the first half with a curling effort which Kusczak palmed around the post.After '
-                     'a quiet first half of just one attempt on target, the game exploded into life as both managers made changes around the hour mark which brought immediate rewards. '
-                     'And both subs almost provided a winner as Winnall low drive forced another save from Kusczak, and Jutkiewicz header found Maxime Colin unmarked, but the defender '
-                     'dragged his shot wide.The draw ended a run of five straight Championship defeats for Birmingham, who remain 23rd, while Derby have now lost just twice in 22 home '
-                     'matches and are 15th.Derby manager Gary Rowett told BBC Radio Derby: "In terms of control of the game we should have had a bit more but control is one thing and '
-                     'you have to turn that control and build up in the final third into good attacking play. "First half we got into good positions but couldn find that bit of quality. '
-                     'There was less space today because Birmingham dropped in deep and blocked the game up."We had a spell of about 15 minutes when we looked nervous and edgy and perhaps '
-                     'took a safe pass and I was disappointed with that - we needed to take more risks."Birmingham caretaker manager Lee Carsley said: "We spoke about being a little more resilient, '
-                     'a bit more compact and trying to nullify the opposition a bit because we knew the quality they have and the firepower available to them."We knew that we had to be at our best '
-                     'in terms of shape and possession and I thought we did that quite well. We just need to look now about having a little more quality on the counter and in the final third."We'
-                     ' got some really good lads in there, lads that want to do really well and the characteristics of a top player is to reproduce good form week in, week out and that the next step for them."']
     else:
-        train_set= ["Katerina Thanou is confident she and fellow sprinter Kostas Kenteris will not be punished for missing drugs tests before the Athens Olympics."
-                    "The Greek pair appeared at a hearing on Saturday which will determine whether their provisional bans from athletics ruling body the IAAF should stand. "
-                    "After five months we finally had the chance to give explanations. I am confident and optimistic, said Thanou. The athletes lawyer Grigoris Ioanidis "
-                    "said he believed the independent disciplinary committee set up by the Greek Athletics Federation would find them innocent. We are almost certain that "
-                    "the charges will be dropped, said Ioanidis.",
+        train_set = [
+            "Katerina Thanou is confident she and fellow sprinter Kostas Kenteris will not be punished for missing drugs tests before the Athens Olympics."
+            "The Greek pair appeared at a hearing on Saturday which will determine whether their provisional bans from athletics ruling body the IAAF should stand. "
+            "After five months we finally had the chance to give explanations. I am confident and optimistic, said Thanou. The athletes lawyer Grigoris Ioanidis "
+            "said he believed the independent disciplinary committee set up by the Greek Athletics Federation would find them innocent. We are almost certain that "
+            "the charges will be dropped, said Ioanidis.",
 
-                    "London Marathon organisers are hoping that banned athlete Susan Chepkemei will still take part in this year's race on 17 April.Chepkemei was suspended from all competition "
-                    "until the end of the year by Athletics Kenya after failing to report to a national training camp. We are watching it closely said London race director David Bedford. The camp "
-                    "in Embu was to prepare for the IAAF World Cross Country Championships later this month. Chepkemei however took part and finished third in last Sunday's world best 10K race in "
-                    "Puerto Rico.",
+            "London Marathon organisers are hoping that banned athlete Susan Chepkemei will still take part in this year's race on 17 April.Chepkemei was suspended from all competition "
+            "until the end of the year by Athletics Kenya after failing to report to a national training camp. We are watching it closely said London race director David Bedford. The camp "
+            "in Embu was to prepare for the IAAF World Cross Country Championships later this month. Chepkemei however took part and finished third in last Sunday's world best 10K race in "
+            "Puerto Rico.",
 
-                    "Paula Radcliffe has been granted extra time to decide whether to compete in the World Cross-Country Championships. The 31-year-old is concerned the event, which "
-                    "starts on 19 March in France, could upset her preparations for the London Marathon on 17 April. Radcliffe was world cross-country champion in 2001 and 2002 but missed "
-                    "last year's event because of injury. In her absence, the GB team won bronze in Brussels.",
+            "Paula Radcliffe has been granted extra time to decide whether to compete in the World Cross-Country Championships. The 31-year-old is concerned the event, which "
+            "starts on 19 March in France, could upset her preparations for the London Marathon on 17 April. Radcliffe was world cross-country champion in 2001 and 2002 but missed "
+            "last year's event because of injury. In her absence, the GB team won bronze in Brussels.",
 
-                    "Wayne Rooney made a winning return to Everton as Manchester United cruised into the FA Cup quarter-finals."
-                    "Rooney received a hostile reception, but goals in each half from Quinton Fortune and Cristiano Ronaldo silenced the jeers at Goodison Park. Fortune headed home after "
-                    "23 minutes before Ronaldo scored when Nigel Martyn parried Paul Scholes' free-kick. Marcus Bent missed Everton's best chance when Roy Carroll, who was later struck by "
-                    "a missile, saved at his feet. It was a fantastic performance by us. In fairness I think Everton have missed a couple of players and got some young players out.",
+            "Wayne Rooney made a winning return to Everton as Manchester United cruised into the FA Cup quarter-finals."
+            "Rooney received a hostile reception, but goals in each half from Quinton Fortune and Cristiano Ronaldo silenced the jeers at Goodison Park. Fortune headed home after "
+            "23 minutes before Ronaldo scored when Nigel Martyn parried Paul Scholes' free-kick. Marcus Bent missed Everton's best chance when Roy Carroll, who was later struck by "
+            "a missile, saved at his feet. It was a fantastic performance by us. In fairness I think Everton have missed a couple of players and got some young players out.",
 
-                    "A brave defensive display, led by keeper David James, helped Manchester City hold the leaders Chelsea. After a quiet opening, James denied Damien Duff, Jiri Jarosik and "
-                    "Mateja Kezman, while Paul Bosvelt cleared William Gallas' header off the line. Robbie Fowler should have scored for the visitors but sent his header wide. Chelsea had "
-                    "most of the possession in the second half but James kept out Frank Lampard's free-kick and superbly tipped the same player's volley wide. City went into the game with the "
-                    "proud record of being the only domestic team to beat Chelsea this season.",
+            "A brave defensive display, led by keeper David James, helped Manchester City hold the leaders Chelsea. After a quiet opening, James denied Damien Duff, Jiri Jarosik and "
+            "Mateja Kezman, while Paul Bosvelt cleared William Gallas' header off the line. Robbie Fowler should have scored for the visitors but sent his header wide. Chelsea had "
+            "most of the possession in the second half but James kept out Frank Lampard's free-kick and superbly tipped the same player's volley wide. City went into the game with the "
+            "proud record of being the only domestic team to beat Chelsea this season.",
 
-                    "Before now many spammers have recruited home PCs to act as anonymous e-mail relays in an attempt to hide the origins of their junk mail. The PCs are recruited using viruses "
-                    "and worms that compromise machines via known vulnerabilities or by tricking people into opening an attachment infected with the malicious program. Once compromised the machines "
-                    "start to pump out junk mail on behalf of spammers. Spamhaus helps to block junk messages from these machines by collecting and circulating blacklists of net addresses known to "
-                    "harbour infected machines. But the novel worm spotted recently by Spamhaus routes junk via the mail servers of the net service firm that infected machines used to get online in "
-                    "the first place. In this way the junk mail gets a net address that looks legitimate. As blocking all mail from net firms just to catch the spam is impractical, Spamhaus is worried "
-                    "that the technique will give junk mailers the ability to spam with little fear of being spotted and stopped.",
+            "Before now many spammers have recruited home PCs to act as anonymous e-mail relays in an attempt to hide the origins of their junk mail. The PCs are recruited using viruses "
+            "and worms that compromise machines via known vulnerabilities or by tricking people into opening an attachment infected with the malicious program. Once compromised the machines "
+            "start to pump out junk mail on behalf of spammers. Spamhaus helps to block junk messages from these machines by collecting and circulating blacklists of net addresses known to "
+            "harbour infected machines. But the novel worm spotted recently by Spamhaus routes junk via the mail servers of the net service firm that infected machines used to get online in "
+            "the first place. In this way the junk mail gets a net address that looks legitimate. As blocking all mail from net firms just to catch the spam is impractical, Spamhaus is worried "
+            "that the technique will give junk mailers the ability to spam with little fear of being spotted and stopped.",
 
-                    "Use of games in schools has been patchy she found, with Sim City proving the most popular. Traditionally schools have eschewed mainstream games in favour of used so-called edu-tainment "
-                    "software in a belief that such packages help to make learning fun, she found in her research. It is perhaps in a compromise between edutainment and mainstream games that the greatest "
-                    "potential for classroom useable games lies, she wrote in a paper entitled Games and Learning. 'Lite' versions of existing games could be the way forward and would overcome one of the "
-                    "biggest hurdles - persuading developers to write for the educational market. This would appeal to developers because of the low costs involved in adapting them as well as offering a "
-                    "new opportunity for marketing. Already there are games on the market, such as Civilisation and Age of Empire, that have educational elements said Mr Owen. Even in Grand Theft Auto it "
-                    "is not just the violence that engages people, he said. It could be some time until that particular game makes it into the classroom though.",
+            "Use of games in schools has been patchy she found, with Sim City proving the most popular. Traditionally schools have eschewed mainstream games in favour of used so-called edu-tainment "
+            "software in a belief that such packages help to make learning fun, she found in her research. It is perhaps in a compromise between edutainment and mainstream games that the greatest "
+            "potential for classroom useable games lies, she wrote in a paper entitled Games and Learning. 'Lite' versions of existing games could be the way forward and would overcome one of the "
+            "biggest hurdles - persuading developers to write for the educational market. This would appeal to developers because of the low costs involved in adapting them as well as offering a "
+            "new opportunity for marketing. Already there are games on the market, such as Civilisation and Age of Empire, that have educational elements said Mr Owen. Even in Grand Theft Auto it "
+            "is not just the violence that engages people, he said. It could be some time until that particular game makes it into the classroom though.",
 
-                    "Microsoft's Media Player 10 took the award for Most Wanted Software. This year was the 10th anniversary of the PC Pro awards, which splits its prizes into two sections. The first are "
-                    "chosen by the magazine's writers and consultants, the second are voted for by readers. Mr Trotter said more than 13,000 people voted for the Reliability and Service Awards, "
-                    "twice as many as in 2003. Net-based memory and video card shop Crucial shared the award for Online Vendor of the year with Novatech.",
+            "Microsoft's Media Player 10 took the award for Most Wanted Software. This year was the 10th anniversary of the PC Pro awards, which splits its prizes into two sections. The first are "
+            "chosen by the magazine's writers and consultants, the second are voted for by readers. Mr Trotter said more than 13,000 people voted for the Reliability and Service Awards, "
+            "twice as many as in 2003. Net-based memory and video card shop Crucial shared the award for Online Vendor of the year with Novatech.",
 
-                    "If the ratings are confirmed, the episode will have given the soap its highest audience for a year. The overnight figures showed almost 60% of the viewing public tuned into EastEnders "
-                    "between 2000 and 2100 GMT, leaving ITV1 with about 13%. We are very pleased with the figures,a BBC spokesman said. It shows viewers have really enjoyed the story of Den's demise. "
-                    "The show's highest audience came at Christmas 1986, when more than 30 million tuned in to see Den, played by Leslie Grantham, hand divorce papers to wife Angie.",
+            "If the ratings are confirmed, the episode will have given the soap its highest audience for a year. The overnight figures showed almost 60% of the viewing public tuned into EastEnders "
+            "between 2000 and 2100 GMT, leaving ITV1 with about 13%. We are very pleased with the figures,a BBC spokesman said. It shows viewers have really enjoyed the story of Den's demise. "
+            "The show's highest audience came at Christmas 1986, when more than 30 million tuned in to see Den, played by Leslie Grantham, hand divorce papers to wife Angie.",
 
-                    "Sky first scooped Oscar rights from the BBC in 1999, but the BBC won them back in 2001 when Sky was forced to pull out of a bidding war due to financial constraints. BBC viewers will "
-                    "of course be able to watch quality coverage of the 2005 Academy Awards on the BBC's bulletins and news programmes, a spokesman said. Among the films tipped to do well at this year's "
-                    "Academy Awards are Martin Scorsese's The Aviator, Jean-Pierre Jeunet's A Very Long Engagement and the Ray Charles biopic, Ray"]
+            "Sky first scooped Oscar rights from the BBC in 1999, but the BBC won them back in 2001 when Sky was forced to pull out of a bidding war due to financial constraints. BBC viewers will "
+            "of course be able to watch quality coverage of the 2005 Academy Awards on the BBC's bulletins and news programmes, a spokesman said. Among the films tipped to do well at this year's "
+            "Academy Awards are Martin Scorsese's The Aviator, Jean-Pierre Jeunet's A Very Long Engagement and the Ray Charles biopic, Ray"]
         test_set = ['football season is getting started']
 
     count_vectorizer = CountVectorizer(stop_words='english', stemming_and_lemmatization=True)
-    count_vectorizer.fit_transform(train_set)
+
+    X_train, y_train, x_y_df = extract_elements_from_2Ddict(train_set)
+    del train_set
+
+    count_vectorizer.fit_transform(X_train)
     print("Vocabulary:", count_vectorizer.vocabulary_)
-    freq_term_matrix = count_vectorizer.transform(train_set)
+    freq_term_matrix = count_vectorizer.transform(X_train)
     tfidf = TfidfTransformer(norm="l2")
     tfidf.fit(freq_term_matrix)
     tf_idf_matrix = tfidf.transform(freq_term_matrix)
     train_docs_with_tfidf = tf_idf_matrix.toarray()
-    print("TFIDF Train:", train_docs_with_tfidf )
+    print("TFIDF Train:", train_docs_with_tfidf)
 
-    freq_term_matrix = count_vectorizer.transform(test_set)
+    #dictionary?
+    my_dict = {i:k for i, k in enumerate(set(y_train))}
+
+    util.dump_adff('TFIDF', 'TFIDF BBC DATA', count_vectorizer.sort_voc(count_vectorizer.reverse_voc(count_vectorizer.vocabulary_)),
+                   my_dict, train_docs_with_tfidf, y_train, TARGET_PATH, 'tfidf_train_bbc_arff')
+
+
+    X_test, y_test, x_y_df = extract_elements_from_2Ddict(test_set)
+    del test_set
+    freq_term_matrix = count_vectorizer.transform(X_test)
     tfidf = TfidfTransformer(norm="l2")
     tfidf.fit(freq_term_matrix)
     tf_idf_matrix = tfidf.transform(freq_term_matrix)
     test_docs_with_tfidf = tf_idf_matrix.toarray()
     print("TFIDF Test:", test_docs_with_tfidf)
-    #if is_test_run is False:
+
+    test_data_df = pd.DataFrame(data=y_test, columns=["Cat"])
+    test_data_df.to_csv(os.path.join(TARGET_PATH, 'tfidf_test_labels.csv'))
+
+    util.dump_adff('TFIDF', 'TFIDF BBC DATA', count_vectorizer.sort_voc(
+        count_vectorizer.reverse_voc(count_vectorizer.vocabulary_)),
+                   my_dict, test_docs_with_tfidf, y_test, TARGET_PATH, 'tfidf_test_bbc_arff', True)
+    # if is_test_run is False:
 
     scores = []
-    for _test_doc in test_docs_with_tfidf:
-        final_new_document_distance_score = 0
-        score_details = {}
-        i = 0
-        for _doc in train_docs_with_tfidf:
-            _new_document_distance_score = 1 - spatial.distance.cosine(_doc, _test_doc)
-            _new_document_distance_score = (0 if math.isnan(_new_document_distance_score) is True else _new_document_distance_score)
-            if _new_document_distance_score > final_new_document_distance_score:
-                final_new_document_distance_score = _new_document_distance_score
-                final_i = i
-            i += 1
-        score_details['score'] = final_new_document_distance_score
-        if is_test_run is False:
-            score_details['doc_indx'] = final_i
-            score_details['category'] = files_dataframe.iloc[final_i][0]
-        else:
-            score_details['category'] = ('sport' if final_i <= 4 else 'tech' if final_i <= 7 else 'entertainment')
-        scores.append(score_details)
+    # for _test_doc in test_docs_with_tfidf:
+    #     final_new_document_distance_score = 0
+    #     score_details = collections.OrderedDict()
+    #     i = 0
+    #     for _doc in train_docs_with_tfidf:
+    #         _new_document_distance_score = 1 - spatial.distance.cosine(_doc, _test_doc)
+    #         _new_document_distance_score = (
+    #             0 if math.isnan(_new_document_distance_score) is True else _new_document_distance_score)
+    #         if _new_document_distance_score > final_new_document_distance_score:
+    #             final_new_document_distance_score = _new_document_distance_score
+    #             final_i = i
+    #         i += 1
+    #     score_details['score'] = final_new_document_distance_score
+    #     if is_test_run is False:
+    #         score_details['doc_indx'] = final_i
+    #         score_details['category'] = files_dataframe.iloc[final_i][0]
+    #     else:
+    #         score_details['category'] = ('sport' if final_i <= 4 else 'tech' if final_i <= 7 else 'entertainment')
+    #     scores.append(score_details)
+    #
+    # print("Scores cosine distance:", scores)
+    #
+    # if is_test_run is False:
+    #     print('sample index data from train set', files_dataframe.values[final_i])
+    #
+    # if save is True:
+    #     with open(os.path.join(TARGET_PATH, 'tfidf_weighs_for_each_document.pickle'), 'wb') as handle:
+    #         pickle.dump(tf_idf_matrix.toarray(), handle, protocol=pickle.HIGHEST_PROTOCOL)
+    #
+    #     with open(os.path.join(TARGET_PATH, 'vocabulary_for_corpus.pickle'), 'wb') as handle:
+    #         pickle.dump(count_vectorizer.vocabulary_, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    print("Scores cosine distance:", scores)
 
-    if is_test_run is False:
-        print('sample index data from train set', files_dataframe.values[final_i])
-
-    if save is True:
-        with open(os.path.join(TARGET_PATH, 'tfidf_weighs_for_each_document.pickle'), 'wb') as handle:
-            pickle.dump(tf_idf_matrix.toarray(), handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-        with open(os.path.join(TARGET_PATH,'vocabulary_for_corpus.pickle'), 'wb') as handle:
-            pickle.dump(count_vectorizer.vocabulary_, handle, protocol=pickle.HIGHEST_PROTOCOL)
+def extract_elements_from_2Ddict(_2d_dict):
 
 
+    X_y = []
+    for _key, _values in _2d_dict.items():
+        for _element in _values:
+            X_y.append((_element, _key))
+
+    #np.random.seed(0)
+    random.shuffle(X_y)
+    df = pd.DataFrame(data=X_y, columns=['Doc', 'Cat'])
+    X = df.Doc.values
+    y = df.Cat.values
+    del X_y
+    del _2d_dict
+    return X, y, df
 
 
-#SCIKIT LEARN STYLE OF MY CUSTOM TFIDF
+# SCIKIT LEARN STYLE OF MY CUSTOM TFIDF
 if __name__ == "__main__":
-
     # prod
-    #classical_tfidf()
-    #hiarchical_dficf()
+    classical_tfidf()
+    # hiarchical_dficf()
 
     # test
-    hiarchical_dficf(True)
-    #classical_tfidf(True)
+    # hiarchical_dficf(True)
+    # classical_tfidf(True)
 
 # start_time = dt.datetime.now()
-    # print('Files are getting ready')
-    # root_folder_name, files_dataframe = get_files_content(TARGET_PATH, 'txt')
-    # print('{} of files are parsed in {} mins.'.format(str(len(files_dataframe)),
-    #                                                   ((dt.datetime.now() - start_time).seconds) / 60))
-    #
-    #
-    # #NEW WAY TO DO THAT
-    # from ahhead_ai.experiments.text import CountVectorizer, TfidfTransformer, DfIcfTransformer
-    # # data = files_dataframe.groupby(['Procedure'])
-    # # number_of_accounts = len(data)
-    # # train_set = dict()
-    # # test_set = dict()
-    # # for _proc, _grouped in data:
-    # #     train_set[_proc] = list()
-    # #     train_set[_proc].extend([x for x in _grouped.Features])
-    # #     # train_set[_proc].extend([x for x in _grouped.Features[:25]])
-    # #     # test_set[_proc] = list()
-    # #     # test_set[_proc].extend([x for x in _grouped.Features[30:]])
-    # # i = 0
-    #
-    # train_set = dict()
-    # # test_set = dict()
-    # train_set['sport'] = ["galatasaray is champion team", "fenerbahce has some problems as a team"]
-    # train_set['finance'] = ["oil is expensive, money is not enough for oil team", "galatasaray stock is expensive"]
-    # i = 0
-    #
-    # #EXISTING WAY TO DO THAT
-    # #from ahhead_ai.experiments.orj_text import CountVectorizer, TfidfTransformer
-    # # train_set = [x for x in files_dataframe.Features[:25]]
-    # # test_set = [x for x in files_dataframe.Features[30:]]
-    # #i = 1
-    #
-    # #
-    # # train_set = ["The sky is blue.", "The sun is bright seen rock n roll.","sky ,rock"]
-    # # test_set = ["The sun in the sky is bright.",
-    # #             "We can see the shining sun, the bright sun."]
-    #
-    #
-    # count_vectorizer = CountVectorizer(stop_words='english',  stemming_and_lemmatization=True )
-    #
-    # #categorical values from the trained count vectorizer.
-    # vocabularies_with_categories_, number_of_categories, dict_for_term_frequencies, dict_for_number_of_documents, \
-    # dict_for_local_category_document_term_count, dict_for_global_category_document_term_count, \
-    # dict_for_global_category_count = count_vectorizer.fit_transform(train_set)
-    #
-    # #count_vectorizer.fit_transform(train_set)
-    # #print('Train set:', train_set)
-    # #print('Test set:', test_set)
-    #
-    # if i < 1:
-    #     dficf = DfIcfTransformer(vocabularies_with_categories_, number_of_categories, dict_for_term_frequencies, dict_for_number_of_documents,
-    #                              dict_for_local_category_document_term_count, dict_for_global_category_document_term_count,
-    #                              dict_for_global_category_count).fit_transform()
-    #
-    #     dficf.fit_transform()
-    #     for _cat, _val in dficf.dficf_weighs_for_documents_in_each_category_.items():
-    #         print("-" * 50)
-    #         print(_cat)
-    #         print("-" * 50)
-    #
-    #         print(10 * '*')
-    #         print("dficf_weighs_for_documents_in_each_category:", _val.toarray())
-    #
-    #         print(10 * '*')
-    #         print("vocabulary_for_each_category")
-    #         for _subkey,_subval in dficf.vocabulary_for_each_category_[_cat].items():
-    #             print('Term ({}) : Position/Index ({})'.format(_subkey, _subval))
-    #         print(10 * '*')
-    #         print("dcicf_weights_for_terms_in_each_category")
-    #         for _subkey, _subval in dficf.dficf_weighs_for_terms_in_each_category_[_cat].items():
-    #             print('Term ({}) : dficf weight ({})'.format(_subkey, _subval))
-    #
-    #     # with open(os.path.join(TARGET_PATH, 'dficf_weighs_for_documents_in_each_category.pickle'), 'wb') as handle:
-    #     #     pickle.dump(dficf.dficf_weighs_for_documents_in_each_category_, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    #     #
-    #     # with open(os.path.join(TARGET_PATH,'vocabulary_for_each_category.pickle'), 'wb') as handle:
-    #     #     pickle.dump(dficf.vocabulary_for_each_category_, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    #     #
-    #     # with open(os.path.join(TARGET_PATH, 'dcicf_weights_for_terms_in_each_category.pickle'), 'wb') as handle:
-    #     #     pickle.dump(dficf.dficf_weighs_for_terms_in_each_category_, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    #
-    #
-    #
-    #     # freq_term_matrix = count_vectorizer.transform(test_set)
-    #     # for _category, _matrix in freq_term_matrix.items():
-    #     #     print(_category, '- Dense:', _matrix.todense())
-    #
-    # else:
-    #     print("Vocabulary:", count_vectorizer.vocabulary_)
-    #     freq_term_matrix = count_vectorizer.transform(test_set)
-    #     print('Dense:', freq_term_matrix.todense())
-    #
-    #     tfidf = TfidfTransformer(norm="l2")
-    #     tfidf.fit(freq_term_matrix)
-    #     print("IDF:", tfidf.idf_)
-    #
-    #     tf_idf_matrix = tfidf.transform(freq_term_matrix)
-    #     print("TF_IDF:", tf_idf_matrix.todense())
+# print('Files are getting ready')
+# root_folder_name, files_dataframe = get_files_content(TARGET_PATH, 'txt')
+# print('{} of files are parsed in {} mins.'.format(str(len(files_dataframe)),
+#                                                   ((dt.datetime.now() - start_time).seconds) / 60))
+#
+#
+# #NEW WAY TO DO THAT
+# from ahhead_ai.experiments.text import CountVectorizer, TfidfTransformer, DfIcfTransformer
+# # data = files_dataframe.groupby(['Procedure'])
+# # number_of_accounts = len(data)
+# # train_set = dict()
+# # test_set = dict()
+# # for _proc, _grouped in data:
+# #     train_set[_proc] = list()
+# #     train_set[_proc].extend([x for x in _grouped.Features])
+# #     # train_set[_proc].extend([x for x in _grouped.Features[:25]])
+# #     # test_set[_proc] = list()
+# #     # test_set[_proc].extend([x for x in _grouped.Features[30:]])
+# # i = 0
+#
+# train_set = dict()
+# # test_set = dict()
+# train_set['sport'] = ["galatasaray is champion team", "fenerbahce has some problems as a team"]
+# train_set['finance'] = ["oil is expensive, money is not enough for oil team", "galatasaray stock is expensive"]
+# i = 0
+#
+# #EXISTING WAY TO DO THAT
+# #from ahhead_ai.experiments.orj_text import CountVectorizer, TfidfTransformer
+# # train_set = [x for x in files_dataframe.Features[:25]]
+# # test_set = [x for x in files_dataframe.Features[30:]]
+# #i = 1
+#
+# #
+# # train_set = ["The sky is blue.", "The sun is bright seen rock n roll.","sky ,rock"]
+# # test_set = ["The sun in the sky is bright.",
+# #             "We can see the shining sun, the bright sun."]
+#
+#
+# count_vectorizer = CountVectorizer(stop_words='english',  stemming_and_lemmatization=True )
+#
+# #categorical values from the trained count vectorizer.
+# vocabularies_with_categories_, number_of_categories, dict_for_term_frequencies, dict_for_number_of_documents, \
+# dict_for_local_category_document_term_count, dict_for_global_category_document_term_count, \
+# dict_for_global_category_count = count_vectorizer.fit_transform(train_set)
+#
+# #count_vectorizer.fit_transform(train_set)
+# #print('Train set:', train_set)
+# #print('Test set:', test_set)
+#
+# if i < 1:
+#     dficf = DfIcfTransformer(vocabularies_with_categories_, number_of_categories, dict_for_term_frequencies, dict_for_number_of_documents,
+#                              dict_for_local_category_document_term_count, dict_for_global_category_document_term_count,
+#                              dict_for_global_category_count).fit_transform()
+#
+#     dficf.fit_transform()
+#     for _cat, _val in dficf.dficf_weighs_for_documents_in_each_category_.items():
+#         print("-" * 50)
+#         print(_cat)
+#         print("-" * 50)
+#
+#         print(10 * '*')
+#         print("dficf_weighs_for_documents_in_each_category:", _val.toarray())
+#
+#         print(10 * '*')
+#         print("vocabulary_for_each_category")
+#         for _subkey,_subval in dficf.vocabulary_for_each_category_[_cat].items():
+#             print('Term ({}) : Position/Index ({})'.format(_subkey, _subval))
+#         print(10 * '*')
+#         print("dcicf_weights_for_terms_in_each_category")
+#         for _subkey, _subval in dficf.dficf_weighs_for_terms_in_each_category_[_cat].items():
+#             print('Term ({}) : dficf weight ({})'.format(_subkey, _subval))
+#
+#     # with open(os.path.join(TARGET_PATH, 'dficf_weighs_for_documents_in_each_category.pickle'), 'wb') as handle:
+#     #     pickle.dump(dficf.dficf_weighs_for_documents_in_each_category_, handle, protocol=pickle.HIGHEST_PROTOCOL)
+#     #
+#     # with open(os.path.join(TARGET_PATH,'vocabulary_for_each_category.pickle'), 'wb') as handle:
+#     #     pickle.dump(dficf.vocabulary_for_each_category_, handle, protocol=pickle.HIGHEST_PROTOCOL)
+#     #
+#     # with open(os.path.join(TARGET_PATH, 'dcicf_weights_for_terms_in_each_category.pickle'), 'wb') as handle:
+#     #     pickle.dump(dficf.dficf_weighs_for_terms_in_each_category_, handle, protocol=pickle.HIGHEST_PROTOCOL)
+#
+#
+#
+#     # freq_term_matrix = count_vectorizer.transform(test_set)
+#     # for _category, _matrix in freq_term_matrix.items():
+#     #     print(_category, '- Dense:', _matrix.todense())
+#
+# else:
+#     print("Vocabulary:", count_vectorizer.vocabulary_)
+#     freq_term_matrix = count_vectorizer.transform(test_set)
+#     print('Dense:', freq_term_matrix.todense())
+#
+#     tfidf = TfidfTransformer(norm="l2")
+#     tfidf.fit(freq_term_matrix)
+#     print("IDF:", tfidf.idf_)
+#
+#     tf_idf_matrix = tfidf.transform(freq_term_matrix)
+#     print("TF_IDF:", tf_idf_matrix.todense())
 
-
-
-#MY STYLE OF MY CUSTOM TFIDF
+# MY STYLE OF MY CUSTOM TFIDF
 '''
 if __name__ == "__main__":
     start_time = dt.datetime.now()

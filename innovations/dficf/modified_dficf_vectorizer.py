@@ -15,6 +15,7 @@ from __future__ import unicode_literals
 
 import array
 import collections
+import operator
 from collections import Mapping, defaultdict
 import numbers
 from itertools import chain
@@ -35,6 +36,7 @@ from  sklearn.feature_extraction.stop_words import ENGLISH_STOP_WORDS
 from  sklearn.utils.validation import check_is_fitted
 from nltk.stem.wordnet import WordNetLemmatizer
 from scipy import spatial
+import random
 
 __all__ = ['CountVectorizer',
            'ENGLISH_STOP_WORDS',
@@ -270,15 +272,15 @@ class VectorizerMixin(object):
 
         try:
             #TODO: try to handle multiple vocabularies.
-            self.vocabularies_with_categories_ = {}
-            self.fixed_vocabulary_with_categories_ = {}
+            self.vocabularies_with_categories_ = collections.OrderedDict()
+            self.fixed_vocabulary_with_categories_ = collections.OrderedDict()
             for raw_category, raw_voc in self.vocabularies_with_categories.items():
                 vocabulary = raw_voc
                 if vocabulary is not None:
                     if isinstance(vocabulary, set):
                         vocabulary = sorted(vocabulary)
                     if not isinstance(vocabulary, Mapping):
-                        vocab = {}
+                        vocab = collections.OrderedDict()
                         for i, t in enumerate(vocabulary):
                             if vocab.setdefault(t, i) != i:
                                 msg = "Duplicate term in vocabulary[category : %s]: %r" % (raw_category, t)
@@ -489,7 +491,7 @@ class CountVectorizer(BaseEstimator, VectorizerMixin):
     def _count_vocab(self, raw_documents_with_categories, fixed_vocab):
         """Create sparse feature matrix, and vocabulary where fixed_vocab=False
         """
-        category_voc_dict = {}
+        category_voc_dict = collections.OrderedDict()
         for raw_category, raw_documents in raw_documents_with_categories.items():
 
             if fixed_vocab:
@@ -508,7 +510,7 @@ class CountVectorizer(BaseEstimator, VectorizerMixin):
 
             for doc in raw_documents:
                 #category_dict[raw_category] = dict() #feature_counter
-                feature_counter = {}
+                feature_counter = collections.OrderedDict()
                 for feature in analyze(doc):
                     try:
                         feature_idx = vocabulary[feature]
@@ -564,8 +566,8 @@ class CountVectorizer(BaseEstimator, VectorizerMixin):
         _dict_for_transferObjects = self._count_vocab(raw_documents_with_categories,
                                           self.fixed_vocabulary_)
 
-        self.dict_for_term_frequencies = {}
-        self.dict_for_number_of_documents = {}
+        self.dict_for_term_frequencies = collections.OrderedDict()
+        self.dict_for_number_of_documents = collections.OrderedDict()
         self.number_of_categories = len(raw_documents_with_categories) - 1
         for raw_category, _transferObject in _dict_for_transferObjects.items():
             vocabulary = _transferObject.object1
@@ -612,17 +614,17 @@ class CountVectorizer(BaseEstimator, VectorizerMixin):
         2 - #_of_Accounts_in_Other(Global)_Contain_This_Term
         3 - #_of_Other_Procedures(Global)_Contain_This_Term
         '''
-        self.dict_for_local_category_document_term_count = {}
-        self.dict_for_global_category_document_term_count = {}
-        self.dict_for_global_category_count = {}
+        self.dict_for_local_category_document_term_count = collections.OrderedDict()
+        self.dict_for_global_category_document_term_count = collections.OrderedDict()
+        self.dict_for_global_category_count = collections.OrderedDict()
 
         print('CountVectorizer for corpus are getting calculated')
 
         for _cat, _voc in self.vocabularies_with_categories_.items():
             print('CATEGORY: {}'.format(_cat))
-            _sub_dict_for_local_category_document_term_count = {}
-            _sub_dict_for_global_category_document_term_count = {}
-            _sub_dict_for_global_category_count = {}
+            _sub_dict_for_local_category_document_term_count = collections.OrderedDict()
+            _sub_dict_for_global_category_document_term_count = collections.OrderedDict()
+            _sub_dict_for_global_category_count = collections.OrderedDict()
 
             corpus_size_of_category = len(_voc)
             global_index = 0
@@ -696,7 +698,7 @@ class CountVectorizer(BaseEstimator, VectorizerMixin):
 
         _dict_for_transferObjects = self._count_vocab(raw_documents_with_categories, fixed_vocab=True)
 
-        dict_for_transforms = {}
+        dict_for_transforms = collections.OrderedDict()
         for raw_category, _transferObject in _dict_for_transferObjects.items():
             _ = _transferObject.object1
             X = _transferObject.object2
@@ -825,7 +827,7 @@ class DfIcfTransformer(object):
         self.dict_for_local_category_document_term_count = dict_for_local_category_document_term_count
         self.dict_for_global_category_document_term_count = dict_for_global_category_document_term_count
         self.dict_for_global_category_count = dict_for_global_category_count
-        self.dficf = {}
+        self.dficf = collections.OrderedDict()
 
     def __avoid_zero_division(self, val):
         _init_val = 0.1  # 0.000000000001#
@@ -836,7 +838,7 @@ class DfIcfTransformer(object):
     def get_global_vectors(self):
 
         #global dictionary is getting filed
-        self.global_vocabulary={}
+        self.global_vocabulary=collections.OrderedDict()
         global_vec_pntr = 0
         for _cat, _dict in self.vocabulary_for_each_category_:
             for _voc in _dict.items():
@@ -865,14 +867,14 @@ class DfIcfTransformer(object):
 
         print('DFICF weights are getting calculated')
 
-        self.dict_for_term_dcicf_weights_for_each_category = {}
+        self.dict_for_term_dcicf_weights_for_each_category = collections.OrderedDict()
         for _cat, _docs in self.dict_for_term_frequencies.items():
             print('CATEGORY: {}'.format(_cat))
             _docs = _docs.toarray()
             _num_of_docs_in_current_category = self.dict_for_number_of_documents[_cat]
             _num_of_docs_in_other_categories = sum(self.dict_for_number_of_documents.values()) -  _num_of_docs_in_current_category
             _num_of_other_categories = self.number_of_categories
-            self.dict_for_term_dcicf_weights_for_each_category[_cat]={}
+            self.dict_for_term_dcicf_weights_for_each_category[_cat]=collections.OrderedDict()
 
             j_indices = []
             indptr = _make_int_array()
@@ -884,7 +886,7 @@ class DfIcfTransformer(object):
 
             for _doc in _docs:
                 _total_features_in_document = sum(_doc)
-                doc_dficf_weigts = {}
+                doc_dficf_weigts = collections.OrderedDict()
                 for _feature, _indx in  self.vocabularies_with_categories[_cat].items():
 
                     _term = _feature
@@ -951,6 +953,7 @@ class DfIcfTransformer(object):
             X.sort_indices()
             self.dficf[_cat] = X
 
+        self.__merge_vocabularies()
         return self
 
 
@@ -966,6 +969,33 @@ class DfIcfTransformer(object):
         # return np.ravel(self._idf_diag.sum(axis=0))
         return self.vocabularies_with_categories
 
+    def reversed_vocabulary_for_each_category(self):
+        try:
+            checker = self.reversed_dict_for_term_dcicf_weights_for_each_category
+        except:
+            self.reversed_dict_for_term_dcicf_weights_for_each_category = collections.OrderedDict()
+            self.sorted_reversed_dict_for_term_dcicf_weights_for_each_category = collections.OrderedDict()
+            for _cat, _val in self.dficf_weighs_for_documents_in_each_category_.items():
+                _voc = self.vocabulary_for_each_category_[_cat]
+                _voc_reversed = {y: x for x, y in _voc.items()}
+                _sorted_reversed_voc = sorted(_voc.items(), key=operator.itemgetter(0))
+                self.reversed_dict_for_term_dcicf_weights_for_each_category[_cat] = _voc_reversed
+                self.sorted_reversed_dict_for_term_dcicf_weights_for_each_category[_cat] = _sorted_reversed_voc
+
+        return self.reversed_dict_for_term_dcicf_weights_for_each_category, self.sorted_reversed_dict_for_term_dcicf_weights_for_each_category
+
+    @property
+    def reversed_vocabulary_for_each_category_(self):
+
+        me, other = self.reversed_vocabulary_for_each_category()
+        return me
+
+    @property
+    def reversed_ordered_vocabulary_for_each_category_(self):
+
+        other, me = self.reversed_vocabulary_for_each_category()
+        return me
+
     @property
     def dficf_weighs_for_terms_in_each_category_(self):
 
@@ -978,13 +1008,13 @@ class DfIcfTransformer(object):
         from collections import defaultdict
         document_term_list = []
         for document in document_list:
-            d = {}
+            d = collections.OrderedDict()
             for _term, _index in vocabulary.items():
                 d[_term] = document[_index]
             document_term_list.append(d)
         return document_term_list
 
-    def fit_transform(self, data, _stemming_and_lemmatization=True ):
+    def fit_transform(self, data, _stemming_and_lemmatization=True, is_random=False):
 
         from .copy_of_orj_tfidf_vectorizer import CountVectorizer as org_count_vectorizer
         count_vectorizer = org_count_vectorizer(stop_words='english', stemming_and_lemmatization=_stemming_and_lemmatization)
@@ -995,7 +1025,7 @@ class DfIcfTransformer(object):
 
         self.term_dic_for_each_document = self._get_term_dic_for_each_document(self.new_doc_voc, new_doc_list)
 
-        self.transformed_input_data_for_each_category_voc = {}
+        self.transformed_input_data_for_each_category_voc = collections.OrderedDict()
         print('New Data is getting fitted and transformed')
         for _cat, _vocs in self.vocabularies_with_categories.items():
             print('CATEGORY: {}'.format(_cat))
@@ -1022,10 +1052,52 @@ class DfIcfTransformer(object):
                 _new_docs.append(_new_doc_elements)
             self.transformed_input_data_for_each_category_voc[_cat] = _new_docs
 
+        self._create_vector(is_random)
         self._calculate_similarity_score()
         self._calculate_euclidean_score()
         self._calculate_cosine_score()
         return self
+
+
+    def _create_vector(self, is_random=False):
+        X_y_y_index = []
+        self.category_as_dict_ = collections.OrderedDict()
+        for _i,_elements in enumerate(self.transformed_input_data_for_each_category_voc.items()):
+            _cat = _elements[0]
+            _sentences = _elements[1]
+            for _si, _sentence in enumerate(_sentences):
+                x = [0.0] * len(self.merged_vocabularies_)
+                for _wi, _categorical_value_of_word in enumerate(_sentence):
+                    _word_name = self.reversed_vocabulary_for_each_category_[_cat][_wi]
+                    _index_of_word_in_merged_voc = self.merged_vocabularies_[_word_name]
+                    x[_index_of_word_in_merged_voc] = _categorical_value_of_word
+                X_y_y_index.append((x, _i, _cat, _si))
+            self.category_as_dict_[_i] = _cat
+
+        if is_random is True:
+            random.shuffle(X_y_y_index)
+
+        self.X = np.array(X_y_y_index)[:,0]
+        self.y = np.array(X_y_y_index)[:,1]
+        self.y_ = np.array(X_y_y_index)[:,2]
+        self.index = np.array(X_y_y_index)[:,3]
+        return self.X, self.y, self.y_, self.index
+
+    @property
+    def vectors_(self):
+        return self.X, self.y, self.y_, self.index,
+
+    @property
+    def categories_(self):
+        return self.category_as_dict_
+
+
+    def sort_voc(self, dict):
+        return sorted(dict.items(), key=operator.itemgetter(0))
+
+    def reverse_voc(self, dict):
+        return {y: x for x, y in dict.items()}
+
 
     def _calculate_euclidean_distance(self, v1, v2):
         return math.sqrt(sum([(a - b) ** 2 for a, b in zip(v1, v2)]))
@@ -1039,7 +1111,7 @@ class DfIcfTransformer(object):
                 _new_transformed_document = self.transformed_input_data_for_each_category_voc_[_cat][_doc_indx]
                 _trained_document = self.dficf_weighs_for_documents_in_each_category_[_cat][0].toarray()[0]
                 _new_document_distance_score = spatial.distance.euclidean(_new_transformed_document, _trained_document)
-                score_detail={}
+                score_detail=collections.OrderedDict()
                 # if _new_document_distance_score <= final_new_document_distance_score:
                 #     final_new_document_distance_score = _new_document_distance_score
                 score_detail['score'] = _new_document_distance_score
@@ -1063,7 +1135,7 @@ class DfIcfTransformer(object):
                 _new_transformed_document = self.transformed_input_data_for_each_category_voc_[_cat][_doc_indx]
                 _trained_document = self.dficf_weighs_for_documents_in_each_category_[_cat][0].toarray()[0]
                 _new_document_distance_score =  1 - spatial.distance.cosine(_new_transformed_document, _trained_document)
-                score_detail = {}
+                score_detail = collections.OrderedDict()
                 # if _new_document_distance_score <= final_new_document_distance_score:
                 #     final_new_document_distance_score = _new_document_distance_score
                 score_detail['score'] = (0 if math.isnan(_new_document_distance_score) is True else _new_document_distance_score)
@@ -1095,7 +1167,7 @@ class DfIcfTransformer(object):
 
                 total_term_weight_for_new_document_in_all_categories = self._get_total_weights_in_all_categories(_cat_based_term_list)
                 _new_document_similarity_score = _term_weight_for_new_document_in_cat / total_term_weight_for_new_document_in_all_categories
-                score_detail = {}
+                score_detail = collections.OrderedDict()
                 # if _new_document_similarity_score >= final_new_document_similarity_score:
                 #     final_new_document_similarity_score = _new_document_similarity_score
                 score_detail['score'] = _new_document_similarity_score
@@ -1132,6 +1204,28 @@ class DfIcfTransformer(object):
 
         # return np.ravel(self._idf_diag.sum(axis=0))
         return self.new_doc_voc
+
+    def __merge_vocabularies(self):
+        try:
+            checker = self.merged_vocabularies_
+        except:
+            self.merged_vocabularies_= collections.OrderedDict()
+
+            for _cat, _val in self.dficf_weighs_for_documents_in_each_category_.items():
+                self.merged_vocabularies_ = {**self.merged_vocabularies_, **self.vocabulary_for_each_category_[_cat]}
+
+            #self.merged_vocabularies_ = dict(enumerate(_key for _key, _val in self.merged_vocabularies_.items()))
+            self.merged_vocabularies_ = {x[0]: i for i, x in enumerate(self.merged_vocabularies_.items())}
+
+        return self.merged_vocabularies_
+
+    @property
+    def merged_vocabularies(self):
+
+        # return np.ravel(self._idf_diag.sum(axis=0))
+        return self.merged_vocabularies_
+
+
 class TfidfVectorizer(CountVectorizer):
 
 
