@@ -71,7 +71,7 @@ def get_files_content(root_folder, file_extension):
                                           columns=['Procedure', 'AccountID', 'Features'])
 
 
-def hiarchical_dficf(is_test_run=False, save=False):
+def hiarchical_dficf(data_size_rate, is_test_run=False, save=False):
     from innovations.dficf.modified_dficf_vectorizer import CountVectorizer, TfidfTransformer, DfIcfTransformer
 
     # NEW WAY TO DO THAT
@@ -88,8 +88,10 @@ def hiarchical_dficf(is_test_run=False, save=False):
         test_set = collections.OrderedDict()
         for _proc, _grouped in data:
             doc_size = len(_grouped.Features)
+            print("Data size of {} proc is {}".format(_proc, doc_size))
+            print("With adding an data rate {}".format(int(doc_size / data_size_rate)))
             docs = _grouped.Features.transform(np.random.permutation)
-            features_train, features_test = train_test_split(docs[:int(doc_size / 4)], test_size=0.33)
+            features_train, features_test = train_test_split(docs[:int(doc_size / data_size_rate)], test_size=0.33)
             train_set[_proc] = list()
             # train_set[_proc].extend([x for x in _grouped.Features])
             train_set[_proc].extend([x for x in features_train])
@@ -248,7 +250,7 @@ def hiarchical_dficf(is_test_run=False, save=False):
     # Just add the known items to the test set from the test set.
     # Start
     X, y, X_y_df = extract_elements_from_2Ddict(test_set)
-    X_y_df.to_csv(os.path.join(TARGET_PATH, 'dficf_test_documents.csv'))
+    X_y_df.to_csv(os.path.join(TARGET_PATH, 'test_documents.csv'))
     # end
     del test_set
     dficf.fit_transform(X, is_random=True)
@@ -262,7 +264,7 @@ def hiarchical_dficf(is_test_run=False, save=False):
     test_data_df = pd.DataFrame(data=y_data_, columns=["Cat"])
     test_data_df.to_csv(os.path.join(TARGET_PATH, 'dficf_test_labels.csv'))
     util.dump_adff('DFICF', 'DFICF BBC DATA', dficf.sort_voc(dficf.reverse_voc(dficf.merged_vocabularies_)),
-                   dficf.category_as_dict_, X_data, y_data_, TARGET_PATH, 'dficf_test_bbc_arff', True)
+                   dficf.category_as_dict_, X_data, y_data_, TARGET_PATH, 'dficf_test_bbc_arff', False)
 
     #
     # print('results')
@@ -281,7 +283,7 @@ def hiarchical_dficf(is_test_run=False, save=False):
     #         pickle.dump(dficf.dficf_weighs_for_terms_in_each_category_, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-def classical_tfidf(is_test_run=False, save=False):
+def classical_tfidf(data_size_rate, is_test_run=False, save=False):
     # ORIGINAL LIB, MISSING LEMMATIZATON
     # from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 
@@ -302,8 +304,10 @@ def classical_tfidf(is_test_run=False, save=False):
         test_set = collections.OrderedDict()
         for _proc, _grouped in data:
             doc_size = len(_grouped.Features)
+            print("Data size of {} proc is {}".format(_proc, doc_size))
+            print("With adding an data rate {}".format(int(doc_size / data_size_rate)))
             docs = _grouped.Features.transform(np.random.permutation)
-            features_train, features_test = train_test_split(docs[:int(doc_size / 4)], test_size=0.33)
+            features_train, features_test = train_test_split(docs[:int(doc_size / data_size_rate)], test_size=0.33)
             train_set[_proc] = list()
             # train_set[_proc].extend([x for x in _grouped.Features])
             train_set[_proc].extend([x for x in features_train])
@@ -399,7 +403,7 @@ def classical_tfidf(is_test_run=False, save=False):
 
     util.dump_adff('TFIDF', 'TFIDF BBC DATA', count_vectorizer.sort_voc(
         count_vectorizer.reverse_voc(count_vectorizer.vocabulary_)),
-                   my_dict, test_docs_with_tfidf, y_test, TARGET_PATH, 'tfidf_test_bbc_arff', True)
+                   my_dict, test_docs_with_tfidf, y_test, TARGET_PATH, 'tfidf_test_bbc_arff', False)
     # if is_test_run is False:
 
     scores = []
@@ -457,8 +461,9 @@ def extract_elements_from_2Ddict(_2d_dict):
 # SCIKIT LEARN STYLE OF MY CUSTOM TFIDF
 if __name__ == "__main__":
     # prod
-    classical_tfidf()
-    # hiarchical_dficf()
+    data_size_rate = 6
+    #classical_tfidf(data_size_rate=data_size_rate)
+    hiarchical_dficf(data_size_rate=data_size_rate)
 
     # test
     # hiarchical_dficf(True)
