@@ -480,8 +480,8 @@ def extract_elements_from_2Ddict(_2d_dict):
 if __name__ == "__main__":
     # prod
     data_size_rate = 6
-    classical_tfidf(data_size_rate=data_size_rate)
-    #hiarchical_dficf(data_size_rate=data_size_rate)
+    #classical_tfidf(data_size_rate=data_size_rate)
+    hiarchical_dficf(data_size_rate=data_size_rate)
 
     # test
     # hiarchical_dficf(True)
