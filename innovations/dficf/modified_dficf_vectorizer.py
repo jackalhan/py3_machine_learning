@@ -1081,11 +1081,12 @@ class DfIcfTransformer(object):
         self.y = np.array(X_y_y_index)[:,1]
         self.y_ = np.array(X_y_y_index)[:,2]
         self.index = np.array(X_y_y_index)[:,3]
-        return self.X, self.y, self.y_, self.index
+        self.all_together = X_y_y_index
+        return self.X, self.y, self.y_, self.index, self.all_together
 
     @property
     def vectors_(self):
-        return self.X, self.y, self.y_, self.index,
+        return self.X, self.y, self.y_, self.index, self.all_together
 
     @property
     def categories_(self):

@@ -149,7 +149,7 @@ def hiarchical_dficf(data_size_rate, is_test_run=False, save=False):
             # "chosen by the magazine's writers and consultants, the second are voted for by readers. Mr Trotter said more than 13,000 people voted for the Reliability and Service Awards, "
             # "twice as many as in 2003. Net-based memory and video card shop Crucial shared the award for Online Vendor of the year with Novatech."
             "football game console", "game console"
-            ]
+        ]
 
         train_set['entertainment'] = [
             # "If the ratings are confirmed, the episode will have given the soap its highest audience for a year. The overnight figures showed almost 60% of the viewing public tuned into EastEnders "
@@ -160,7 +160,7 @@ def hiarchical_dficf(data_size_rate, is_test_run=False, save=False):
             # "of course be able to watch quality coverage of the 2005 Academy Awards on the BBC's bulletins and news programmes, a spokesman said. Among the films tipped to do well at this year's "
             # "Academy Awards are Martin Scorsese's The Aviator, Jean-Pierre Jeunet's A Very Long Engagement and the Ray Charles biopic, Ray."
             "cinema console actor", "cinema actor"
-            ]
+        ]
 
         test_set = ['football season is getting started']
 
@@ -173,7 +173,6 @@ def hiarchical_dficf(data_size_rate, is_test_run=False, save=False):
     vocabularies_with_categories_, number_of_categories, dict_for_term_frequencies, dict_for_number_of_documents, \
     dict_for_local_category_document_term_count, dict_for_global_category_document_term_count, \
     dict_for_global_category_count = count_vectorizer.fit_transform(train_set)
-
 
     del count_vectorizer
 
@@ -218,18 +217,20 @@ def hiarchical_dficf(data_size_rate, is_test_run=False, save=False):
     # print('test_set_voc_', dficf.new_doc_voc_)
     # print('test_set_terms', dficf.term_dic_for_each_document)
     # print('transformed_input_data_for_each_category_voc_', dficf.transformed_input_data_for_each_category_voc_)
-    X_data, y_data, y_data_, sentence_index = dficf.vectors_
+    X_data, y_data, y_data_, sentence_index, all_together = dficf.vectors_
+
+
     # print('vectors of test set', dficf.vectors_)
     # print('categories as dict', dficf.category_as_dict_)
 
-    #Just add the known items to the test set from the test set.
+    # Just add the known items to the test set from the test set.
     # Start
     len_of_test = len(X)
     len_of_test_ = len(X_data)
     X_data_ = []
-    y_data__ =[]
+    y_data__ = []
     for _i, _y in enumerate(y):
-        print('*'* 10)
+        print('*' * 10)
         print('Document index:', str(_i))
         for _i_vectors in range(_i, len_of_test_, len_of_test):
             print('Checking index in Data:', str(_i_vectors))
@@ -241,11 +242,14 @@ def hiarchical_dficf(data_size_rate, is_test_run=False, save=False):
                 break
 
     # End
+    all_together = list(zip(X_data_, y_data__))
+    train_data_all_in_one = pd.DataFrame(data=all_together,
+                                         columns=['vector', 'generated_category_name'])
+
+    train_data_all_in_one.to_csv(os.path.join(TARGET_PATH, 'dficf_train_all_in_one.csv'))
 
     util.dump_adff('DFICF', 'DFICF BBC DATA', dficf.sort_voc(dficf.reverse_voc(dficf.merged_vocabularies_)),
                    dficf.category_as_dict_, X_data_, y_data__, TARGET_PATH, 'dficf_train_bbc_arff')
-
-
 
     # Just add the known items to the test set from the test set.
     # Start
@@ -257,9 +261,14 @@ def hiarchical_dficf(data_size_rate, is_test_run=False, save=False):
     # print('test_set_voc_', dficf.new_doc_voc_)
     # print('test_set_terms', dficf.term_dic_for_each_document)
     # print('transformed_input_data_for_each_category_voc_', dficf.transformed_input_data_for_each_category_voc_)
-    X_data, y_data, y_data_, sentence_index = dficf.vectors_
+    X_data, y_data, y_data_, sentence_index, all_together = dficf.vectors_
     # print('vectors of test set', dficf.vectors_)
     # print('categories as dict', dficf.category_as_dict_)
+
+    test_data_all_in_one= pd.DataFrame(data=all_together, columns=['vector', 'generated_category_indx', 'generated_category_name', 'actual_index'])
+
+    test_data_all_in_one['actual_category_name'] = test_data_all_in_one.apply(lambda  row: y[row['actual_index']], axis=1)
+    test_data_all_in_one.to_csv(os.path.join(TARGET_PATH, 'dficf_test_all_in_one.csv'))
 
     test_data_df = pd.DataFrame(data=y_data_, columns=["Cat"])
     test_data_df.to_csv(os.path.join(TARGET_PATH, 'dficf_test_labels.csv'))
@@ -382,12 +391,17 @@ def classical_tfidf(data_size_rate, is_test_run=False, save=False):
     train_docs_with_tfidf = tf_idf_matrix.toarray()
     print("TFIDF Train:", train_docs_with_tfidf)
 
-    #dictionary?
-    my_dict = {i:k for i, k in enumerate(set(y_train))}
+    # dictionary?
+    my_dict = {i: k for i, k in enumerate(set(y_train))}
 
-    util.dump_adff('TFIDF', 'TFIDF BBC DATA', count_vectorizer.sort_voc(count_vectorizer.reverse_voc(count_vectorizer.vocabulary_)),
+    all_together = list(zip(train_docs_with_tfidf.tolist(), y_train.tolist()))
+    train_data_all_in_one = pd.DataFrame(data=all_together,
+                                        columns=['vector', 'generated_category_name'])
+    train_data_all_in_one.to_csv(os.path.join(TARGET_PATH, 'tfidf_train_all_in_one.csv'))
+
+    util.dump_adff('TFIDF', 'TFIDF BBC DATA',
+                   count_vectorizer.sort_voc(count_vectorizer.reverse_voc(count_vectorizer.vocabulary_)),
                    my_dict, train_docs_with_tfidf, y_train, TARGET_PATH, 'tfidf_train_bbc_arff')
-
 
     X_test, y_test, x_y_df = extract_elements_from_2Ddict(test_set)
     del test_set
@@ -397,6 +411,12 @@ def classical_tfidf(data_size_rate, is_test_run=False, save=False):
     tf_idf_matrix = tfidf.transform(freq_term_matrix)
     test_docs_with_tfidf = tf_idf_matrix.toarray()
     print("TFIDF Test:", test_docs_with_tfidf)
+
+    all_together = list(zip(test_docs_with_tfidf.tolist(),y_test.tolist()))
+
+    test_data_all_in_one = pd.DataFrame(data=all_together,
+                                        columns=['vector', 'generated_category_name'])
+    test_data_all_in_one.to_csv(os.path.join(TARGET_PATH, 'tfidf_test_all_in_one.csv'))
 
     test_data_df = pd.DataFrame(data=y_test, columns=["Cat"])
     test_data_df.to_csv(os.path.join(TARGET_PATH, 'tfidf_test_labels.csv'))
@@ -441,14 +461,12 @@ def classical_tfidf(data_size_rate, is_test_run=False, save=False):
 
 
 def extract_elements_from_2Ddict(_2d_dict):
-
-
     X_y = []
     for _key, _values in _2d_dict.items():
         for _element in _values:
             X_y.append((_element, _key))
 
-    #np.random.seed(0)
+    # np.random.seed(0)
     random.shuffle(X_y)
     df = pd.DataFrame(data=X_y, columns=['Doc', 'Cat'])
     X = df.Doc.values
@@ -462,8 +480,8 @@ def extract_elements_from_2Ddict(_2d_dict):
 if __name__ == "__main__":
     # prod
     data_size_rate = 6
-    #classical_tfidf(data_size_rate=data_size_rate)
-    hiarchical_dficf(data_size_rate=data_size_rate)
+    classical_tfidf(data_size_rate=data_size_rate)
+    #hiarchical_dficf(data_size_rate=data_size_rate)
 
     # test
     # hiarchical_dficf(True)
