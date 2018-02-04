@@ -476,12 +476,236 @@ def extract_elements_from_2Ddict(_2d_dict):
     return X, y, df
 
 
+
+def hiarchical_tficf(data_size_rate, is_test_run=False, save=False):
+    from innovations.dficf.modified_dficf_vectorizer_added_tf import CountVectorizer, TfidfTransformer, DfIcfTransformer
+
+    # NEW WAY TO DO THAT
+    if is_test_run is False:
+        start_time = dt.datetime.now()
+        print('Files are getting ready')
+        root_folder_name, files_dataframe = get_files_content(TARGET_PATH, 'txt')
+        print('{} of files are parsed in {} mins.'.format(str(len(files_dataframe)),
+                                                          ((dt.datetime.now() - start_time).seconds) / 60))
+        np.random.seed(0)
+        data = files_dataframe.groupby(['Procedure'])
+        len_of_data = len(data)
+        train_set = collections.OrderedDict()
+        test_set = collections.OrderedDict()
+        for _proc, _grouped in data:
+            doc_size = len(_grouped.Features)
+            print("Data size of {} proc is {}".format(_proc, doc_size))
+            print("With adding an data rate {}".format(int(doc_size / data_size_rate)))
+            docs = _grouped.Features.transform(np.random.permutation)
+            features_train, features_test = train_test_split(docs[:int(doc_size / data_size_rate)], test_size=0.33)
+            train_set[_proc] = list()
+            # train_set[_proc].extend([x for x in _grouped.Features])
+            train_set[_proc].extend([x for x in features_train])
+            test_set[_proc] = list()
+            test_set[_proc].extend([x for x in features_test])
+
+    else:
+        train_set = collections.OrderedDict()
+        # test_set = dict()
+
+        train_set['sport'] = [
+            # "Katerina Thanou is confident she and fellow sprinter Kostas Kenteris will not be punished for missing drugs tests before the Athens Olympics."
+            # "The Greek pair appeared at a hearing on Saturday which will determine whether their provisional bans from athletics ruling body the IAAF should stand. "
+            # "After five months we finally had the chance to give explanations. I am confident and optimistic, said Thanou. The athletes lawyer Grigoris Ioanidis "
+            # "said he believed the independent disciplinary committee set up by the Greek Athletics Federation would find them innocent. We are almost certain that "
+            # "the charges will be dropped, said Ioanidis.",
+            #
+            # "London Marathon organisers are hoping that banned athlete Susan Chepkemei will still take part in this year's race on 17 April.Chepkemei was suspended from all competition "
+            # "until the end of the year by Athletics Kenya after failing to report to a national training camp. We are watching it closely said London race director David Bedford. The camp "
+            # "in Embu was to prepare for the IAAF World Cross Country Championships later this month. Chepkemei however took part and finished third in last Sunday's world best 10K race in "
+            # "Puerto Rico.",
+            #
+            # "Paula Radcliffe has been granted extra time to decide whether to compete in the World Cross-Country Championships. The 31-year-old is concerned the event, which "
+            # "starts on 19 March in France, could upset her preparations for the London Marathon on 17 April. Radcliffe was world cross-country champion in 2001 and 2002 but missed "
+            # "last year's event because of injury. In her absence, the GB team won bronze in Brussels.",
+            #
+            # "Wayne Rooney made a winning return to Everton as Manchester United cruised into the FA Cup quarter-finals."
+            # "Rooney received a hostile reception, but goals in each half from Quinton Fortune and Cristiano Ronaldo silenced the jeers at Goodison Park. Fortune headed home after "
+            # "23 minutes before Ronaldo scored when Nigel Martyn parried Paul Scholes' free-kick. Marcus Bent missed Everton's best chance when Roy Carroll, who was later struck by "
+            # "a missile, saved at his feet. It was a fantastic performance by us. In fairness I think Everton have missed a couple of players and got some young players out.",
+            #
+            # "A brave defensive display, led by keeper David James, helped Manchester City hold the leaders Chelsea. After a quiet opening, James denied Damien Duff, Jiri Jarosik and "
+            # "Mateja Kezman, while Paul Bosvelt cleared William Gallas' header off the line. Robbie Fowler should have scored for the visitors but sent his header wide. Chelsea had "
+            # "most of the possession in the second half but James kept out Frank Lampard's free-kick and superbly tipped the same player's volley wide. City went into the game with the "
+            # "proud record of being the only domestic team to beat Chelsea this season."
+            "football ball player", "ball player"
+        ]
+
+        train_set['tech'] = [
+            # "Before now many spammers have recruited home PCs to act as anonymous e-mail relays in an attempt to hide the origins of their junk mail. The PCs are recruited using viruses "
+            # "and worms that compromise machines via known vulnerabilities or by tricking people into opening an attachment infected with the malicious program. Once compromised the machines "
+            # "start to pump out junk mail on behalf of spammers. Spamhaus helps to block junk messages from these machines by collecting and circulating blacklists of net addresses known to "
+            # "harbour infected machines. But the novel worm spotted recently by Spamhaus routes junk via the mail servers of the net service firm that infected machines used to get online in "
+            # "the first place. In this way the junk mail gets a net address that looks legitimate. As blocking all mail from net firms just to catch the spam is impractical, Spamhaus is worried "
+            # "that the technique will give junk mailers the ability to spam with little fear of being spotted and stopped.",
+            #
+            # "Use of games in schools has been patchy she found, with Sim City proving the most popular. Traditionally schools have eschewed mainstream games in favour of used so-called edu-tainment "
+            # "software in a belief that such packages help to make learning fun, she found in her research. It is perhaps in a compromise between edutainment and mainstream games that the greatest "
+            # "potential for classroom useable games lies, she wrote in a paper entitled Games and Learning. 'Lite' versions of existing games could be the way forward and would overcome one of the "
+            # "biggest hurdles - persuading developers to write for the educational market. This would appeal to developers because of the low costs involved in adapting them as well as offering a "
+            # "new opportunity for marketing. Already there are games on the market, such as Civilisation and Age of Empire, that have educational elements said Mr Owen. Even in Grand Theft Auto it "
+            # "is not just the violence that engages people, he said. It could be some time until that particular game makes it into the classroom though.",
+            #
+            # "Microsoft's Media Player 10 took the award for Most Wanted Software. This year was the 10th anniversary of the PC Pro awards, which splits its prizes into two sections. The first are "
+            # "chosen by the magazine's writers and consultants, the second are voted for by readers. Mr Trotter said more than 13,000 people voted for the Reliability and Service Awards, "
+            # "twice as many as in 2003. Net-based memory and video card shop Crucial shared the award for Online Vendor of the year with Novatech."
+            "football game console", "game console"
+        ]
+
+        train_set['entertainment'] = [
+            # "If the ratings are confirmed, the episode will have given the soap its highest audience for a year. The overnight figures showed almost 60% of the viewing public tuned into EastEnders "
+            # "between 2000 and 2100 GMT, leaving ITV1 with about 13%. We are very pleased with the figures,a BBC spokesman said. It shows viewers have really enjoyed the story of Den's demise. "
+            # "The show's highest audience came at Christmas 1986, when more than 30 million tuned in to see Den, played by Leslie Grantham, hand divorce papers to wife Angie.",
+            #
+            # "Sky first scooped Oscar rights from the BBC in 1999, but the BBC won them back in 2001 when Sky was forced to pull out of a bidding war due to financial constraints. BBC viewers will "
+            # "of course be able to watch quality coverage of the 2005 Academy Awards on the BBC's bulletins and news programmes, a spokesman said. Among the films tipped to do well at this year's "
+            # "Academy Awards are Martin Scorsese's The Aviator, Jean-Pierre Jeunet's A Very Long Engagement and the Ray Charles biopic, Ray."
+            "cinema console actor", "cinema actor"
+        ]
+
+        test_set = ['football season is getting started']
+
+        print('train set:', train_set)
+        print('test set:', test_set)
+
+    count_vectorizer = CountVectorizer(stop_words='english', stemming_and_lemmatization=True)
+
+    # categorical values from the trained count vectorizer.
+    vocabularies_with_categories_, number_of_categories, dict_for_term_frequencies, dict_for_number_of_documents, \
+    dict_for_local_category_document_term_count, dict_for_global_category_document_term_count, \
+    dict_for_global_category_count = count_vectorizer.fit_transform(train_set)
+
+    del count_vectorizer
+
+    dficf = DfIcfTransformer(vocabularies_with_categories_, number_of_categories, dict_for_term_frequencies,
+                             dict_for_number_of_documents,
+                             dict_for_local_category_document_term_count, dict_for_global_category_document_term_count,
+                             dict_for_global_category_count)
+
+    dficf.transform()
+    # print('Merged vocabularies:', dficf.sort_voc(dficf.reverse_voc(dficf.merged_vocabularies_)))
+    # for _cat, _val in dficf.dficf_weighs_for_documents_in_each_category_.items():
+    #     print("-" * 50)
+    #     print(_cat)
+    #     print("-" * 50)
+    #
+    #     # print(10 * '*')
+    #     # print("dficf_weighs_for_documents_in_each_category:", _val.toarray())
+    #     #
+    #     # print(10 * '*')
+    #     # print("vocabulary_for_each_category")
+    #     # for _subkey, _subval in dficf.vocabulary_for_each_category_[_cat].items():
+    #     #     print('Term ({}) : Position/Index ({})'.format(_subkey, _subval))
+    #     # print(10 * '*')
+    #     # print("dcicf_weights_for_terms_in_each_category")
+    #     # for _subkey, _subval in dficf.dficf_weighs_for_terms_in_each_category_[_cat].items():
+    #     #     print('Term ({}) : dficf weight ({})'.format(_subkey, _subval))
+    #     _voc = dficf.vocabulary_for_each_category_[_cat]
+    #     _reversed = dficf.reversed_vocabulary_for_each_category_[_cat]
+    #     _sorted_reversed = dficf.reversed_ordered_vocabulary_for_each_category_[_cat]
+    #
+    #     print('Normal Voc:', _voc)
+    #     print('Reversed Voc:', _reversed)
+    #     print('Sorted Reversed Voc:', _sorted_reversed)
+
+    # Just add the known items to the test set from the test set.
+    # Start
+    X, y, X_y_df = extract_elements_from_2Ddict(train_set)
+    X_y_df.to_csv(os.path.join(TARGET_PATH, 'train_documents.csv'))
+    # end
+    del train_set
+    dficf.fit_transform(X)
+    # print('test_set_voc_', dficf.new_doc_voc_)
+    # print('test_set_terms', dficf.term_dic_for_each_document)
+    # print('transformed_input_data_for_each_category_voc_', dficf.transformed_input_data_for_each_category_voc_)
+    X_data, y_data, y_data_, sentence_index, all_together = dficf.vectors_
+
+
+    # print('vectors of test set', dficf.vectors_)
+    # print('categories as dict', dficf.category_as_dict_)
+
+    # Just add the known items to the test set from the test set.
+    # Start
+    len_of_test = len(X)
+    len_of_test_ = len(X_data)
+    X_data_ = []
+    y_data__ = []
+    for _i, _y in enumerate(y):
+        print('*' * 10)
+        print('Document index:', str(_i))
+        for _i_vectors in range(_i, len_of_test_, len_of_test):
+            print('Checking index in Data:', str(_i_vectors))
+            if (_y == y_data_[_i_vectors]):
+                print('Found index in Data:', str(_i_vectors))
+                print('Found doc in Data:', _y)
+                X_data_.append(X_data[_i_vectors])
+                y_data__.append(y_data_[_i_vectors])
+                break
+
+    # End
+    all_together = list(zip(X_data_, y_data__))
+    train_data_all_in_one = pd.DataFrame(data=all_together,
+                                         columns=['vector', 'generated_category_name'])
+
+    train_data_all_in_one.to_csv(os.path.join(TARGET_PATH, 'dficf_train_all_in_one.csv'))
+
+    util.dump_adff('DFICF', 'DFICF BBC DATA', dficf.sort_voc(dficf.reverse_voc(dficf.merged_vocabularies_)),
+                   dficf.category_as_dict_, X_data_, y_data__, TARGET_PATH, 'dficf_train_bbc_arff')
+
+    # Just add the known items to the test set from the test set.
+    # Start
+    X, y, X_y_df = extract_elements_from_2Ddict(test_set)
+    X_y_df.to_csv(os.path.join(TARGET_PATH, 'test_documents.csv'))
+    # end
+    del test_set
+    dficf.fit_transform(X, is_random=True)
+    # print('test_set_voc_', dficf.new_doc_voc_)
+    # print('test_set_terms', dficf.term_dic_for_each_document)
+    # print('transformed_input_data_for_each_category_voc_', dficf.transformed_input_data_for_each_category_voc_)
+    X_data, y_data, y_data_, sentence_index, all_together = dficf.vectors_
+    # print('vectors of test set', dficf.vectors_)
+    # print('categories as dict', dficf.category_as_dict_)
+
+    test_data_all_in_one= pd.DataFrame(data=all_together, columns=['vector', 'generated_category_indx', 'generated_category_name', 'actual_index'])
+
+    test_data_all_in_one['actual_category_name'] = test_data_all_in_one.apply(lambda  row: y[row['actual_index']], axis=1)
+    test_data_all_in_one.to_csv(os.path.join(TARGET_PATH, 'dficf_test_all_in_one.csv'))
+
+    test_data_df = pd.DataFrame(data=y_data_, columns=["Cat"])
+    test_data_df.to_csv(os.path.join(TARGET_PATH, 'dficf_test_labels.csv'))
+    util.dump_adff('DFICF', 'DFICF BBC DATA', dficf.sort_voc(dficf.reverse_voc(dficf.merged_vocabularies_)),
+                   dficf.category_as_dict_, X_data, y_data_, TARGET_PATH, 'dficf_test_bbc_arff', False)
+
+    #
+    # print('results')
+    # print('(max is important) score based:', dficf.similarity_scores_)
+    # print('(min is important) euclidean distance based:', dficf.similarity_euclidean_distance_)
+    # print('(max is important) cosine distance based:', dficf.similarity_cosine_distance_)
+
+    # if save is True:
+    #     with open(os.path.join(TARGET_PATH, 'dficf_weighs_for_documents_in_each_category.pickle'), 'wb') as handle:
+    #         pickle.dump(dficf.dficf_weighs_for_documents_in_each_category_, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    #
+    #     with open(os.path.join(TARGET_PATH,'vocabulary_for_each_category.pickle'), 'wb') as handle:
+    #         pickle.dump(dficf.vocabulary_for_each_category_, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    #
+    #     with open(os.path.join(TARGET_PATH, 'dcicf_weights_for_terms_in_each_category.pickle'), 'wb') as handle:
+    #         pickle.dump(dficf.dficf_weighs_for_terms_in_each_category_, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
 # SCIKIT LEARN STYLE OF MY CUSTOM TFIDF
 if __name__ == "__main__":
     # prod
-    data_size_rate = 6
+    data_size_rate = 2.5
     #classical_tfidf(data_size_rate=data_size_rate)
-    hiarchical_dficf(data_size_rate=data_size_rate)
+    #hiarchical_dficf(data_size_rate=data_size_rate)
+
+    #hiarchical_tficf(data_size_rate=data_size_rate)
+    classical_tfidf(data_size_rate=data_size_rate)
 
     # test
     # hiarchical_dficf(True)
